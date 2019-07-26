@@ -1011,7 +1011,7 @@ let checkCanUse = () => {
 /**
  * 入口
  */
-window.onload = () => {
+$(document).ready(() => {
     window.setTimeout( () => {
         'use strict';
         //检查兼容性
