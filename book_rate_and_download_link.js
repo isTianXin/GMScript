@@ -631,7 +631,7 @@ const downloadSiteSourceConfig = {
         siteName: '书荒网',
         searchConfig(args) {
             let data = 'show=title%2Cwriter%2Ckeyboard&tbname=news&tempid=1&keyboard=' + encodeURIComponent(args.bookName);
-            let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "alllclastsearchtime=" + (Date.parse(new Date) / 1000 - 48) };
+            let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "alllclastsearchtime=" + (Date.parse(new Date) / 1000 - 480) };
             return { url: "http://www.15huang.com/e/search/index.php", data: data, method: "POST", headers: headers, anonymous: true };
         },
         bookList(item) {
