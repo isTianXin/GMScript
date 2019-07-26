@@ -1024,4 +1024,4 @@ window.onload = () => {
         insertBookRate(location.hostname);
         insertBookDownloadLink(location.hostname);
     },1000)
-};
+});
