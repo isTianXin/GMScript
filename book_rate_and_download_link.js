@@ -1012,14 +1012,16 @@ let checkCanUse = () => {
  * 入口
  */
 window.onload = () => {
-    'use strict';
-    //检查兼容性
-    let checkResult = checkCanUse();
-    if (!checkResult.canUse) {
-        alert(checkResult.message);
-        return;
-    }
-    //插入评分
-    insertBookRate(location.hostname);
-    insertBookDownloadLink(location.hostname);
+    window.setTimeout( () => {
+        'use strict';
+        //检查兼容性
+        let checkResult = checkCanUse();
+        if (!checkResult.canUse) {
+            alert(checkResult.message);
+            return;
+        }
+        //插入评分
+        insertBookRate(location.hostname);
+        insertBookDownloadLink(location.hostname);
+    },1000)
 };
