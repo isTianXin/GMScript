@@ -528,7 +528,7 @@ const downloadSiteSourceConfig = {
         name: 'zxcs8',
         siteName: '知轩藏书',
         searchConfig(args) {
-            return { url: 'http://www.zxcs.me/index.php?keyword=' + args.bookName, method:"GET" };
+            return { url: 'http://www.zxcs.me/index.php?keyword=' + args.bookName, method: "GET" };
         },
         bookList(item) {
             return Array.from(item.getElementsByTagName('dl'));
@@ -592,13 +592,13 @@ const downloadSiteSourceConfig = {
         name: 'nordfxs',
         siteName: '龙凤互联',
         searchConfig(args) {
-//            let form = new FormData();
-//           form.append("formhash", "191940c0");
-//            form.append("srchtxt", args.bookName);
-//            form.append("searchsubmit", "yes");
+            //            let form = new FormData();
+            //           form.append("formhash", "191940c0");
+            //            form.append("srchtxt", args.bookName);
+            //            form.append("searchsubmit", "yes");
             let data = 'formhash=191940c0&srchtxt=' + args.bookName + '&searchsubmit=yes';
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
-            return { url: "https://www.nordfxs.com/search.php?mod=forum", data: data, method: "POST",headers: headers};
+            return { url: "https://www.nordfxs.com/search.php?mod=forum", data: data, method: "POST", headers: headers };
         },
         bookList(item) {
             return Array.from(item.querySelectorAll('.pbw'));
@@ -776,11 +776,16 @@ const downloadSiteTargetRoute = {
 const downloadSiteTargetConfig = {
     'yousuu': {
         name: 'yousuu',
+        _utils: {},
         //预处理
         prepare() {
+            //获取dataV的值
+            let node = document.querySelector('div.common-card-layout.main-left-header');
+            let dataV = node.outerHTML.match(/data-v-(\w+)/g);
+            this._utils.dataV = dataV;
             //插入下载容器
-            let content = '<div data-v-41abf9f6="" class="common-card-layout main-left-header" id="gm-insert-download-box" style="display: none">'
-                        + '<div data-v-872b3656="" data-v-f97d91be="" class="tabs" id="gm-insert-download-content"></div></div>';
+            let content = '<div ' + dataV[0] + '="" class="common-card-layout main-left-header" id="gm-insert-download-box" style="display: none">'
+                + '<div ' + dataV[1] + '="" ' + dataV[2] + '="" class="tabs" id="gm-insert-download-content"></div></div>';
             document.querySelector('div.common-card-layout.main-left-header').insertAdjacentHTML('beforebegin', content);
         },
         bookName() {
@@ -796,9 +801,9 @@ const downloadSiteTargetConfig = {
             //如果第一次插入,则显示父容器，同时插入标识
             if (obj.parentElement.style.display === 'none') {
                 obj.parentElement.setAttribute('style', 'display:run-in');
-                item = '<label data-v-872b3656="" class="tab current">下载地址</label>';
+                item = '<label ' + this._utils.dataV[3] + '="" class="tab current">下载地址</label>';
             }
-            item += '<label data-v-872b3656="" class="tab"><a href="' + info.downloadLink +'" target="_blank">' + info.siteName + '</a></label>';
+            item += '<label ' + this._utils.dataV[3] + '="" class="tab"><a href="' + info.downloadLink + '" target="_blank">' + info.siteName + '</a></label>';
             obj.insertAdjacentHTML('beforeend', item);
         },
     },
@@ -901,7 +906,7 @@ let getDownLoadLink = async (options) => {
         if (cacheValue !== null) {
             return { downloadLink: cacheValue, siteName: siteConfig.siteName };
         }
-        let response = await fetch(siteConfig.fetchConfig({url:options.bookLink}));
+        let response = await fetch(siteConfig.fetchConfig({ url: options.bookLink }));
         let html = new DOMParser().parseFromString(response.responseText, "text/html");
         // let html = GM_safeHTMLParser(response);
         let downloadLink = siteConfig.downloadLink(html);
@@ -945,7 +950,7 @@ let getDownloadInfo = async (handler, bookInfo) => {
     let cacheKey = 'GET:BOOKLINK:' + handler.name.toUpperCase() + ':NAME:' + bookInfo.bookName + ':AUTHOR:' + bookInfo.bookAuthor;
     let cacheValue = storage.getValue(cacheKey, DOWNLOAD_EXPIRED_TIME);
     if (cacheValue !== null) {
-        return { bookLink: cacheValue.bookLink, bookItem: new DOMParser().parseFromString(cacheValue.bookItem, "text/html"),match: cacheValue.match };
+        return { bookLink: cacheValue.bookLink, bookItem: new DOMParser().parseFromString(cacheValue.bookItem, "text/html"), match: cacheValue.match };
         // return { bookLink: cacheValue.bookLink, bookItem: GM_safeHTMLParser(cacheValue.bookItem) };
     }
 
@@ -961,11 +966,11 @@ let getDownloadInfo = async (handler, bookInfo) => {
  */
 let insertDownload = async (options) => {
     let target = downloadSiteTargetConfig[options.downloadTargetSite];
-    let bookInfo = {bookName: target.bookName(),bookAuthor:target.bookAuthor()};
+    let bookInfo = { bookName: target.bookName(), bookAuthor: target.bookAuthor() };
     let source = downloadSiteSourceConfig[options.site];
     //获取下载信息
     let downloadInfo = await getDownloadInfo(source, bookInfo);
-    if(downloadInfo.match){
+    if (downloadInfo.match) {
         //解析下载链接
         let data = await source.handler({ site: options.site, ...downloadInfo });
         //处理下载链接
@@ -983,7 +988,7 @@ let insertBookDownloadLink = async (hostname) => {
         let downloadTargetSite = downloadSiteTargetRoute[hostname]();
         let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
         targetConfig.prepare();
-        let promises = sites.map((site) => insertDownload({site:site,downloadTargetSite:downloadTargetSite}).catch(e => console.log(e)));
+        let promises = sites.map((site) => insertDownload({ site: site, downloadTargetSite: downloadTargetSite }).catch(e => console.log(e)));
         await Promise.all(promises);
         //sites.forEach( site => {
         //     insertDownload({site:site,downloadTargetSite:downloadTargetSite}).catch(e => console.log(e));
@@ -1012,7 +1017,7 @@ let checkCanUse = () => {
  * 入口
  */
 $(document).ready(() => {
-    window.setTimeout( () => {
+    window.setTimeout(() => {
         'use strict';
         //检查兼容性
         let checkResult = checkCanUse();
@@ -1022,6 +1027,7 @@ $(document).ready(() => {
         }
         //插入评分
         insertBookRate(location.hostname);
+        //插入下载链接
         insertBookDownloadLink(location.hostname);
-    },1000)
+    }, 1000)
 });
