@@ -42,7 +42,7 @@
 // @connect      www.ixdzs.com
 // @connect      www.aixdzs.com
 // @connect      www.xuanquge.com
-// @version      0.6
+// @version      0.6.1
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
