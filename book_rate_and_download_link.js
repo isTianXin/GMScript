@@ -52,7 +52,7 @@
 // @connect      www.xuanquge.com
 // @connect      www.ixuanquge.com
 // @connect      www.wanbentxt.com
-// @version      0.6.1
+// @version      0.6.2
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
