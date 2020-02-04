@@ -36,6 +36,7 @@
 // @match        *://www.ixuanquge.com/soft*
 // @match        *://www.ixuanquge.com/search.html
 // @match        *://www.ixuanquge.com/top/*
+// @match        *://www.wanbentxt.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @connect      www.yousuu.com
@@ -215,86 +216,78 @@ const rateSiteSourceConfig = {
 const rateSiteTargetRoute = {
     'www.zxcs.me': () => {
         let tag = location.pathname.split('/')[1];
+        let prefix = 'zxcs8.';
         if (tag === 'post') {
-            return 'zxcs8.post';
+            return prefix + 'post';
         }
         if (['sort', 'tag', 'author'].includes(tag)) {
-            return 'zxcs8.sort';
+            return prefix + 'sort';
         }
         // 搜索页面
         if (location.pathname.includes('index.php')) {
-            return 'zxcs8.sort';
+            return prefix + 'sort';
         }
     },
     'www.zadzs.com': () => {
         let pathname = location.pathname;
+        let prefix = 'zadzs.';
         if (pathname.includes('txt')) {
-            return 'zadzs.detail';
+            return prefix + 'detail';
         }
         if (pathname.includes('search')) {
-            return 'zadzs.search';
+            return prefix + 'search';
         }
     },
     'www.15huang.com': () => {
         let pathname = location.pathname;
-
+        let prefix = '15huang.';
         // 搜索结果 || 作者
         if (pathname == '/e/search/result/') {
-            return '15huang.category';
+            return prefix + 'category';
         }
 
         // 详情页
         if (pathname.includes('.html')) {
-            return '15huang.detail';
+            return prefix + 'detail';
         }
-        return '15huang.category';
+        return prefix + 'category';
     },
-    'www.3uww.cc': () => {
+    'www.ixuanquge.com': () => {
         let pathname = location.pathname;
+        let prefix = '3uww.';
         // 排行
         if (pathname.includes('top')) {
-            return '3uww.category';
+            return prefix + 'category';
         }
         // 详情
         if (pathname.includes('down')) {
-            return '3uww.detail';
+            return prefix + 'detail';
         }
         // 作者
         if (pathname.includes('author')) {
-            return '3uww.author';
+            return prefix + 'author';
         }
         // 分类
         if (pathname.search(/soft(\d+)/ig) !== -1) {
-            return '3uww.category';
+            return prefix + 'category';
         }
         // 搜索
         if (pathname.includes('search')) {
-            return '3uww.search';
+            return prefix + 'search';
         }
     },
-    'www.xuanquge.com': () => {
+    'www.wanbentxt.com': () => {
         let pathname = location.pathname;
-        // 排行
-        if (pathname.includes('top')) {
-            return '3uww.category';
+        let prefix = 'wanbentxt.';
+        //分类(/all/demo.html)
+        if (/^\/all\/(\w+)\.html$/i.test(pathname)) {
+            return prefix + 'category';
         }
-        // 详情
-        if (pathname.includes('down')) {
-            return '3uww.detail';
+        //详情页(/数字/)
+        if (/\/(\d)+\//.test(pathname)) {
+            return prefix + 'detail';
         }
-        // 作者
-        if (pathname.includes('author')) {
-            return '3uww.author';
-        }
-        // 分类
-        if (pathname.search(/soft(\d+)/ig) !== -1) {
-            return '3uww.category';
-        }
-        // 搜索
-        if (pathname.includes('search')) {
-            return '3uww.search';
-        }
-    },
+    }
 };
 
 /**
@@ -530,6 +523,55 @@ const rateSiteTargetConfig = {
             });
         }
     },
+    'wanbentxt.detail': {
+        name: 'wanbentxt.detail',
+        bookName(item) {
+            return item.querySelector('div.contentDiv > div > div.detail > div.detailTop > div.detailTopMid > div.detailTitle > h1').innerText;
+        },
+        bookAuthor(item) {
+            return item.querySelector('div.contentDiv > div > div.detail > div.detailTop > div.detailTopMid > div.writer > a').innerText;
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<tr>
+                    <td width="10%"><span>书籍评分：</span></td>
+                    <td width="10%"><a href="${bookLink}" target="_blank">${rate}</a></td>
+                    <td width="10%"><span>评分人数：</span></td>
+                    <td width="10%">${rateNum}</td>
+                </tr>`;
+
+        },
+        anchorObj(item) {
+            return item.querySelector('div.detail > div.detailTop > div.detailTopMid > table > tbody').firstElementChild;
+        },
+        anchorPos: "afterend",
+        handler(options, callback) {
+            callback({ site: this.name, item: document, ...options });
+        },
+    },
+    'wanbentxt.category': {
+        name: 'wanbentxt.category',
+        bookName(item) {
+            return item.querySelector('div.sortPhr > a').innerText;
+        },
+        bookAuthor(item) {
+            return item.querySelector('div.sortPhr > p.author > a').innerText;
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<p class="actor" style="margin-top: 7px"><em>评分：</em><a href="${bookLink}" target="_blank">${rate}</a>&nbsp;&nbsp;&nbsp;&nbsp;人数：${rateNum}</p>`;
+        },
+        anchorObj(item) {
+            return item.querySelector('div.sortPhr > p.actor');
+        },
+        anchorPos: "afterend",
+        handler(options, callback) {
+            let bookList = Array.from(document.querySelector('div.contentDiv > div > div.sortBottom > div.sortList > ul').children);
+            bookList.forEach((item) => {
+                callback({ site: this.name, item: item, ...options });
+            });
+        },
+    },
 };
 
 /**
@@ -725,8 +767,8 @@ const downloadSiteSourceConfig = {
         },
         _isCurrentBlockedBySearchTimeGap(item) {
             //由于搜索时间间隔过短被限制
-            if(!this._isBlockedBySearchTimeGapChecked){
-                this._isBlockedBySearchTimeGap = (item.querySelector("div.blockcontent") || {innerText: ''}).innerText.includes('间隔时间不得少于');
+            if (!this._isBlockedBySearchTimeGapChecked) {
+                this._isBlockedBySearchTimeGap = (item.querySelector("div.blockcontent") || { innerText: '' }).innerText.includes('间隔时间不得少于');
                 this._isBlockedBySearchTimeGapChecked = true;
             }
             return this._isBlockedBySearchTimeGap;
@@ -914,7 +956,13 @@ let insertRate = async (options) => {
 let insertBookRate = (hostname) => {
     if (Object.keys(rateSiteTargetRoute).includes(hostname)) {
         let site = rateSiteTargetRoute[hostname]();
+        if (!site) {
+            return;
+        }
         let siteConfig = rateSiteTargetConfig[site];
+        if (!siteConfig) {
+            return;
+        }
         let options = { site: site, rateSourceSite: 'yousuu' };
         siteConfig.handler(options, insertRate);
     }
@@ -987,7 +1035,7 @@ let getDownloadInfo = async (handler, bookInfo) => {
     let response = await fetch(handler.searchConfig({ bookName: bookInfo.bookName }));
     let [data, cache] = handler.parse(bookInfo, handler, response);
     //判断是否应该添加缓存
-    if (!handler.hasOwnProperty('shouldCacheBookLink') || handler.shouldCacheBookLink({item: data.bookItem})){
+    if (!handler.hasOwnProperty('shouldCacheBookLink') || handler.shouldCacheBookLink({ item: data.bookItem })) {
         storage.setValue(cacheKey, cache);
     }
     return data;
@@ -1042,7 +1090,7 @@ let checkCanUse = () => {
 };
 
 let isTampermonkey = () => {
-    return (GM_info || {scriptHandler:''}).scriptHandler.toLowerCase() === SCRIPT_HANDLER_TAMPERMONKEY;
+    return (GM_info || { scriptHandler: '' }).scriptHandler.toLowerCase() === SCRIPT_HANDLER_TAMPERMONKEY;
 }
 /*======================================================================================================*/
 /**
