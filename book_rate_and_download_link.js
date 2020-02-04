@@ -4,6 +4,7 @@
 // @description  [知轩藏书/早安电子书/书荒网]添加优书网评分和直链，优书网书籍详情页添加[知轩藏书/早安电子书/龙凤互联/书荒网]下载链接
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.js
 // @require      https://greasyfork.org/scripts/40003-pajhome-md5-min/code/PajHome-MD5-min.js
+// @require      https://cdn.jsdelivr.net/npm/gbk.js@0.3.0/dist/gbk.min.js
 // @author       tianxin
 // @match        *://zxcs.me/sort/*
 // @match        *://zxcs.me/post/*
@@ -30,7 +31,13 @@
 // @match        *://www.xuanquge.com/soft*
 // @match        *://www.xuanquge.com/search.html
 // @match        *://www.xuanquge.com/top/*
+// @match        *://www.ixuanquge.com/down/*
+// @match        *://www.ixuanquge.com/author/*
+// @match        *://www.ixuanquge.com/soft*
+// @match        *://www.ixuanquge.com/search.html
+// @match        *://www.ixuanquge.com/top/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_info
 // @connect      www.yousuu.com
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
@@ -42,6 +49,8 @@
 // @connect      www.ixdzs.com
 // @connect      www.aixdzs.com
 // @connect      www.xuanquge.com
+// @connect      www.ixuanquge.com
+// @connect      www.wanbentxt.com
 // @version      0.6.1
 // ==/UserScript==
 
@@ -56,6 +65,9 @@ const MAX_SEARCH_NUM = 5;
 const DOWNLOAD_TYPE_DIRECT = 1;
 const DOWNLOAD_TYPE_FETCH = 2;
 const DOWNLOAD_TYPE_PROCESS = 3;
+
+//扩展名
+const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
 /*======================================================================================================*/
 
 /*================================================  类  ================================================*/
@@ -527,8 +539,9 @@ const downloadSiteSourceConfig = {
     'zxcs8': {
         name: 'zxcs8',
         siteName: '知轩藏书',
+        host: 'http://www.zxcs.me',
         searchConfig(args) {
-            return { url: 'http://www.zxcs.me/index.php?keyword=' + args.bookName, method: "GET" };
+            return { url: this.host + '/index.php?keyword=' + args.bookName, method: "GET" };
         },
         bookList(item) {
             return Array.from(item.getElementsByTagName('dl'));
@@ -556,49 +569,14 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
-    // 'zadzs': {
-    //     name: 'zadzs',
-    //     siteName: '早安电子书',
-    //     searchConfig(args){
-    //         return { url: 'http://www.zadzs.com/plus/search.php?kwtype=0&q=' + args.bookName };
-    //     },
-    //     bookList(item){
-    //         return Array.from(item.getElementsByClassName('searchItem'));
-    //     },
-    //     bookName(item){
-    //         return item.querySelector('.book>h5>a').innerText;
-    //     },
-    //     bookAuthor(item){
-    //         return item.querySelector('.book>.price').innerText.split('：').pop();
-    //     },
-    //     bookLink(item){
-    //         return 'http://www.zadzs.com' + item.querySelector('.book>.cover').pathname;
-    //     },
-    //     downloadLink(item){
-    //         return 'http://www.zadzs.com' + item.querySelector('.book>cover').href;
-    //     },
-    //     handler(options){
-    //         return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
-    //     },
-    //     parse(bookInfo,handler,response){
-    //         return parseRawDownloadResponse(bookInfo,handler,response);
-    //     },
-    //     // type: DOWNLOAD_TYPE_FETCH 需设置
-    //     fetchConfig(options){
-    //         return {url:options.url,method:'GET'};
-    //     },
-    // },
     'nordfxs': {
         name: 'nordfxs',
         siteName: '龙凤互联',
+        host: 'https://www.nordfxs.com',
         searchConfig(args) {
-            //            let form = new FormData();
-            //           form.append("formhash", "191940c0");
-            //            form.append("srchtxt", args.bookName);
-            //            form.append("searchsubmit", "yes");
             let data = 'formhash=191940c0&srchtxt=' + args.bookName + '&searchsubmit=yes';
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
-            return { url: "https://www.nordfxs.com/search.php?mod=forum", data: data, method: "POST", headers: headers };
+            return { url: this.host + '/search.php?mod=forum', data: data, method: "POST", headers: headers };
         },
         bookList(item) {
             return Array.from(item.querySelectorAll('.pbw'));
@@ -629,10 +607,11 @@ const downloadSiteSourceConfig = {
     '15huang': {
         name: '15huang',
         siteName: '书荒网',
+        host: 'http://www.15huang.com',
         searchConfig(args) {
             let data = 'show=title%2Cwriter%2Ckeyboard&tbname=news&tempid=1&keyboard=' + encodeURIComponent(args.bookName);
             let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "alllclastsearchtime=" + (Date.parse(new Date) / 1000 - 480) };
-            return { url: "http://www.15huang.com/e/search/index.php", data: data, method: "POST", headers: headers, anonymous: true };
+            return { url: this.host + '/e/search/index.php', data: data, method: "POST", headers: headers, anonymous: true };
         },
         bookList(item) {
             return Array.from(item.querySelectorAll("li.cate-infobox.col.xs-24.md-12"));
@@ -647,7 +626,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector('a.open.bg-hui-hover').href;
         },
         downloadLink(item) {
-            return 'http://www.15huang.com' + item.querySelector('.downurl.col.xs-24.md-5>a').href.replace(location.origin, '');
+            return this.host + item.querySelector('.downurl.col.xs-24.md-5>a').href.replace(location.origin, '');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
@@ -663,10 +642,11 @@ const downloadSiteSourceConfig = {
     '3uww': {
         name: '3uww',
         siteName: '炫书网',
+        host: 'https://www.ixuanquge.com',
         searchConfig(args) {
             let data = 'searchkey=' + args.bookName;
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
-            return { url: "https://www.xuanquge.com/search.html", data: data, method: "POST", headers: headers };
+            return { url: this.host + '/search.html', data: data, method: "POST", headers: headers };
         },
         bookList(item) {
             return Array.from(item.querySelectorAll('.searchTopic'));
@@ -694,43 +674,12 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
-    // 'mianhuatang': {
-    //     name: 'mianhuatang',
-    //     siteName: '棉花糖小说网',
-    //     searchConfig(args){
-    //         return { url: 'http://zhannei.baidu.com/cse/search?s=7965856832468911224&q=' + args.bookName };
-    //     },
-    //     bookList(item){
-    //         return Array.from(item.querySelectorAll('.result-item.result-game-item'));
-    //     },
-    //     bookName(item){
-    //         return item.querySelector('.result-game-item-detail>h3>a').title;
-    //     },
-    //     bookAuthor(item){
-    //         return item.querySelector('.result-game-item-info>p.result-game-item-info-tag').lastElementChild.innerText.trim();
-    //     },
-    //     bookLink(item){
-    //         return item.querySelector('.result-game-item-detail>h3>a').href;
-    //     },
-    //     downloadLink(item){
-    //         return 'http://www.mianhuatang.la/down/txt' + item.querySelector('.result-game-item-detail>h3>a').href.match(/(\d+)/ig).pop() + '.html';
-    //     },
-    //     handler(options){
-    //         return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
-    //     },
-    //     parse(bookInfo,handler,response){
-    //         return parseRawDownloadResponse(bookInfo,handler,response);
-    //     },
-    //     // type: DOWNLOAD_TYPE_FETCH 需设置
-    //     fetchConfig(options){
-    //         return {url:options.url,method:'GET'};
-    //     },
-    // },
     'ixdzs': {
         name: 'ixdzs',
         siteName: '爱下电子书',
+        host: 'https://www.aixdzs.com',
         searchConfig(args) {
-            return { url: 'https://www.aixdzs.com/bsearch?q=' + args.bookName, method: "GET" };
+            return { url: this.host + '/bsearch?q=' + args.bookName, method: "GET" };
         },
         bookList(item) {
             return Array.from(item.querySelectorAll('div.box_k>ul>li'));
@@ -742,10 +691,10 @@ const downloadSiteSourceConfig = {
             return item.querySelector('p.b_info>span>a').innerText;
         },
         bookLink(item) {
-            return 'https://www.ixdzs.com' + item.querySelector('h2.b_name>a').href.replace(location.origin, '');
+            return this.host + item.querySelector('h2.b_name>a').href.replace(location.origin, '');
         },
         downloadLink(item) {
-            return 'https://www.ixdzs.com' + item.querySelector('h2.b_name>a').href.replace(location.origin, '');
+            return this.host + item.querySelector('h2.b_name>a').href.replace(location.origin, '');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
@@ -758,6 +707,90 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
+    'wanbentxt': {
+        name: 'wanbentxt',
+        siteName: '完本神站',
+        host: 'https://www.wanbentxt.com',
+        _isBookList: false,
+        _isBookListChecked: false,
+        _isBlockedBySearchTimeGap: false,
+        _isBlockedBySearchTimeGapChecked: false,
+        _isCurrentBookList(item) {
+            //如果匹配到的搜索结果只有一条, 会直接进入对应的书籍详情页，因此需要判断一下
+            if (!this._isBookListChecked) {
+                this._isBookList = !item.querySelector('div.contentDiv > div > div.detail');
+                this._isBookListChecked = true;
+            }
+            return this._isBookList;
+        },
+        _isCurrentBlockedBySearchTimeGap(item) {
+            //由于搜索时间间隔过短被限制
+            if(!this._isBlockedBySearchTimeGapChecked){
+                this._isBlockedBySearchTimeGap = (item.querySelector("div.blockcontent") || {innerText: ''}).innerText.includes('间隔时间不得少于');
+                this._isBlockedBySearchTimeGapChecked = true;
+            }
+            return this._isBlockedBySearchTimeGap;
+        },
+        searchConfig(args) {
+            let data = 'searchtype=articlename&searchkey=' + GBK.URI.encodeURI(args.bookName);
+            let headers = { "Content-Type": "application/x-www-form-urlencoded;charset=gbk", "Cookie": "jieqiVisitTime=jieqiArticlesearchTime%3d" + (Date.parse(new Date) / 1000 - 240) };
+            let details = { url: this.host + '/modules/article/search.php', data: data, method: 'POST', headers: headers, overrideMimeType: 'text/html;charset=gbk' };
+            //Tampermonkey 有个BUG, anonymous = true 时 overrideMimeType 无效
+            if (!isTampermonkey()) {
+                Object.assign(details, { anonymous: true });
+            }
+            return details;
+
+        },
+        bookList(item) {
+            //检查是否由于搜索时间间隔问题而被限制
+            this._isCurrentBlockedBySearchTimeGap(item);
+            //书籍详情页, 包装下 html 直接返回即可
+            if (this._isCurrentBookList(item)) {
+                return Array.from(item.querySelectorAll('body > div.contentDiv > div > div.result > div.resultLeft > ul > li'));
+            }
+            return Array.from(item.querySelectorAll('body'));
+
+        },
+        bookName(item) {
+            if (this._isCurrentBookList(item)) {
+                return item.querySelector('div.sortPhr > a').innerText;
+            }
+            return item.querySelector('div.contentDiv > div > div.detail > div.detailTop > div.detailTopMid > div.detailTitle > h1').innerText;
+        },
+        bookAuthor(item) {
+            if (this._isCurrentBookList(item)) {
+                return item.querySelector('div.sortPhr > p.author > a').innerText;
+            }
+            return item.querySelector('div.contentDiv > div > div.detail > div.detailTop > div.detailTopMid > div.writer > a').innerText;
+        },
+        bookLink(item) {
+            let href;
+            if (this._isCurrentBookList(item)) {
+                href = item.querySelector('div.sortPhr > a').href;
+            } else {
+                href = item.querySelector('div.contentDiv > div > div.route').lastElementChild.href;
+            }
+            return this.host + href.replace(location.origin, '').replace(this.host, '');
+        },
+        downloadLink(item) {
+            return this.host + '/down' + this.bookLink(item).replace(location.origin, '').replace(this.host, '');
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+        //bookLink是否应该添加缓存
+        shouldCacheBookLink(options) {
+            return !this._isCurrentBlockedBySearchTimeGap(options.item);
+        },
+    }
 };
 
 /**
@@ -908,7 +941,6 @@ let getDownLoadLink = async (options) => {
         }
         let response = await fetch(siteConfig.fetchConfig({ url: options.bookLink }));
         let html = new DOMParser().parseFromString(response.responseText, "text/html");
-        // let html = GM_safeHTMLParser(response);
         let downloadLink = siteConfig.downloadLink(html);
         storage.setValue(cacheKey, downloadLink);
         return { downloadLink: downloadLink, siteName: siteConfig.siteName };
@@ -924,7 +956,6 @@ let getDownLoadLink = async (options) => {
  */
 let parseRawDownloadResponse = (bookInfo, handler, response) => {
     let html = new DOMParser().parseFromString(response.responseText, "text/html");
-    // let html = GM_safeHTMLParser(response);
     let bookList = handler.bookList(html);
     let bookLink = '';
     let bookItem = '';
@@ -951,12 +982,14 @@ let getDownloadInfo = async (handler, bookInfo) => {
     let cacheValue = storage.getValue(cacheKey, DOWNLOAD_EXPIRED_TIME);
     if (cacheValue !== null) {
         return { bookLink: cacheValue.bookLink, bookItem: new DOMParser().parseFromString(cacheValue.bookItem, "text/html"), match: cacheValue.match };
-        // return { bookLink: cacheValue.bookLink, bookItem: GM_safeHTMLParser(cacheValue.bookItem) };
     }
 
     let response = await fetch(handler.searchConfig({ bookName: bookInfo.bookName }));
     let [data, cache] = handler.parse(bookInfo, handler, response);
-    storage.setValue(cacheKey, cache);
+    //判断是否应该添加缓存
+    if (!handler.hasOwnProperty('shouldCacheBookLink') || handler.shouldCacheBookLink({item: data.bookItem})){
+        storage.setValue(cacheKey, cache);
+    }
     return data;
 };
 
@@ -990,9 +1023,6 @@ let insertBookDownloadLink = async (hostname) => {
         targetConfig.prepare();
         let promises = sites.map((site) => insertDownload({ site: site, downloadTargetSite: downloadTargetSite }).catch(e => console.log(e)));
         await Promise.all(promises);
-        //sites.forEach( site => {
-        //     insertDownload({site:site,downloadTargetSite:downloadTargetSite}).catch(e => console.log(e));
-        //})
     }
 }
 
@@ -1011,7 +1041,9 @@ let checkCanUse = () => {
     return { canUse: canUse, message: message };
 };
 
-
+let isTampermonkey = () => {
+    return (GM_info || {scriptHandler:''}).scriptHandler.toLowerCase() === SCRIPT_HANDLER_TAMPERMONKEY;
+}
 /*======================================================================================================*/
 /**
  * 入口
