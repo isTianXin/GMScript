@@ -36,6 +36,7 @@
 // @match        *://www.ixuanquge.com/soft*
 // @match        *://www.ixuanquge.com/search.html
 // @match        *://www.ixuanquge.com/top/*
+// @match        *://www.wanbentxt.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @connect      www.yousuu.com
@@ -278,10 +279,6 @@ const rateSiteTargetRoute = {
     'www.wanbentxt.com': () => {
         let pathname = location.pathname;
         let prefix = 'wanbentxt.';
-        //分类(/all/demo.html)
-        if (/^\/all\/(\w+)\.html$/i.test(pathname)) {
-            return prefix + 'category';
-        }
         //详情页(/数字/)
         if (/\/(\d)+\//.test(pathname)) {
             return prefix + 'detail';
