@@ -36,7 +36,6 @@
 // @match        *://www.ixuanquge.com/soft*
 // @match        *://www.ixuanquge.com/search.html
 // @match        *://www.ixuanquge.com/top/*
-// @match        *://www.wanbentxt.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @connect      www.yousuu.com
