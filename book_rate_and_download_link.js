@@ -52,6 +52,7 @@
 // @connect      www.xuanquge.com
 // @connect      www.ixuanquge.com
 // @connect      www.wanbentxt.com
+// @connect      www.afs360.com
 // @version      0.6.2
 // ==/UserScript==
 
@@ -828,7 +829,42 @@ const downloadSiteSourceConfig = {
         shouldCacheBookLink(options) {
             return !this._isCurrentBlockedBySearchTimeGap(options.item);
         },
-    }
+    },
+    'afs360': {
+        name: 'afs360',
+        siteName: '万书网',
+        host: 'https://www.afs360.com',
+        searchConfig(args) {
+            let data = 'show=title&keyboard=' + args.bookName;
+            let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "txt2017lastsearchtime=" + (Date.parse(new Date) / 1000 - 480) };
+            return { url: this.host + '/e/search/index.php', data: data, method: "POST", headers: headers, anonymous: true };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll("tr > td > table.box > tbody > tr > td > h2"));
+        },
+        bookName(item) {
+            return item.querySelector('a').innerText;
+        },
+        bookAuthor(item) {
+            return item.lastChild.textContent.slice(1,-1);
+        },
+        bookLink(item) {
+            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
 };
 
 /**
