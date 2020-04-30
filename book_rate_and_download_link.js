@@ -53,7 +53,7 @@
 // @connect      www.ixuanquge.com
 // @connect      www.wanbentxt.com
 // @connect      www.afs360.com
-// @version      0.6.2
+// @version      0.6.3
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
