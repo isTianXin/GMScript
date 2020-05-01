@@ -1095,7 +1095,7 @@ let parseRawDownloadResponse = (bookInfo, handler, response) => {
     let bookLink = '';
     let bookItem = '';
     let match = bookList.some((item) => {
-        if (handler.bookName(item) === bookInfo.bookName && handler.bookAuthor(item) === bookInfo.bookAuthor) {
+        if (handler.bookName(item).trim() === bookInfo.bookName.trim() && handler.bookAuthor(item).trim() === bookInfo.bookAuthor.trim()) {
             bookItem = item;
             bookLink = handler.bookLink(item);
             return true;
