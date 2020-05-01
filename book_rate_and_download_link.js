@@ -53,7 +53,8 @@
 // @connect      www.ixuanquge.com
 // @connect      www.wanbentxt.com
 // @connect      www.afs360.com
-// @version      0.6.3
+// @connect      www.auzw.com
+// @version      0.6.4
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
@@ -70,6 +71,11 @@ const DOWNLOAD_TYPE_PROCESS = 3;
 
 //扩展名
 const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
+
+//需要排除的下载源
+const DOWNLOAD_SITES_EXCEPTED = [
+    'wanbentxt',
+];
 /*======================================================================================================*/
 
 /*================================================  类  ================================================*/
@@ -865,6 +871,39 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
+    'auzw': {
+        name: 'auzw',
+        siteName: '傲世中文网',
+        host: 'https://www.auzw.com',
+        searchConfig(args) {
+            return { url: this.host + '/search.php?q=' + args.bookName, method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll("div > div> div.book_info"));
+        },
+        bookName(item) {
+            return item.querySelector("a").innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.querySelector("p.nowrap > a").innerText;
+        },
+        bookLink(item) {
+            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+        },
+        downloadLink(item) {
+            return this.host + item.querySelector('small > a').href.replace(location.origin,'').replace(this.host,'');
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
 };
 
 /**
@@ -919,6 +958,22 @@ const downloadSiteTargetConfig = {
 /*======================================================================================================*/
 
 /*===============================================  方法  ================================================*/
+
+/*===============================================  util  ===============================================*/
+
+/**
+ * 数组的差集
+ * @param {array} firstArray 
+ * @param {array} secondArray 
+ * @returns {array}
+ */
+let arrayDiff = (firstArray, secondArray) => {
+    let set = new Set(secondArray);
+    return [...firstArray].filter(item => !set.has(item));
+}
+
+/*=====================================================================================================*/
+
 
 /*===============================================  base  ===============================================*/
 /**
@@ -1097,7 +1152,7 @@ let insertDownload = async (options) => {
  */
 let insertBookDownloadLink = async (hostname) => {
     if (Object.keys(downloadSiteTargetRoute).includes(hostname)) {
-        let sites = Object.keys(downloadSiteSourceConfig);
+        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig),DOWNLOAD_SITES_EXCEPTED);
         let downloadTargetSite = downloadSiteTargetRoute[hostname]();
         let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
         targetConfig.prepare();
