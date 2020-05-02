@@ -54,7 +54,9 @@
 // @connect      www.wanbentxt.com
 // @connect      www.afs360.com
 // @connect      www.auzw.com
-// @version      0.6.4
+// @connect      www.mianhuatang.cc
+// @connect      www.balingtxt.com
+// @version      0.6.5
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
@@ -892,6 +894,79 @@ const downloadSiteSourceConfig = {
         },
         downloadLink(item) {
             return this.host + item.querySelector('small > a').href.replace(location.origin,'').replace(this.host,'');
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'mianhuatang': {
+        name: 'mianhuatang',
+        siteName: '棉花糖小说网',
+        host: 'http://www.mianhuatang.cc',
+        searchConfig(args) {
+            let data = 'searchkey=' + args.bookName;
+            let headers = { "Content-Type": "application/x-www-form-urlencoded" };
+            return { url: this.host + '/search.php', data: data, method: "POST", headers: headers };
+        },
+        bookList(item) {
+            //从第一行开始, 去除表头
+            return Array.from(item.querySelectorAll("div.main > div > table > tbody > tr")).slice(1);
+        },
+        bookName(item) {
+            return item.querySelector("a").innerText;
+        },
+        bookAuthor(item) {
+            return item.children[2].innerText;
+        },
+        bookLink(item) {
+            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+        },
+        downloadLink(item) {
+            let bookId = this.bookLink(item).match(/\/(\d+)\/$/)[1];
+            return this.host + `/down/txt${bookId}.html`;
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'balingtxt': {
+        name: 'balingtxt',
+        siteName: '八零电子书',
+        host: 'http://www.balingtxt.com',
+        searchConfig(args) {
+            let data = 'searchkey=' + args.bookName + '&s=18140131260432570322';
+            let headers = { "Content-Type": "application/x-www-form-urlencoded" };
+            return { url: this.host + '/modules/article/search.php', data: data, method: "POST", headers: headers };
+        },
+        bookList(item) {
+            //从第一行开始, 去除表头
+            return Array.from(item.querySelectorAll("#content > div > ul > li.storelistbt5a"));
+        },
+        bookName(item) {
+            return item.querySelector("a.bookname").innerText.match(/《(.*?)》/)[1];
+        },
+        bookAuthor(item) {
+            return item.querySelector("p > a").innerText;
+        },
+        bookLink(item) {
+            return this.host + item.querySelector('a.bookname').href.replace(location.origin,'').replace(this.host,'');
+        },
+        downloadLink(item) {
+            return this.bookLink(item).replace('.html','/down.html');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
