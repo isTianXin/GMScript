@@ -5,6 +5,7 @@
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.js
 // @require      https://greasyfork.org/scripts/40003-pajhome-md5-min/code/PajHome-MD5-min.js
 // @require      https://cdn.jsdelivr.net/npm/gbk.js@0.3.0/dist/gbk.min.js
+// @require https://greasyfork.org/scripts/5392-waitforkeyelements/code/WaitForKeyElements.js
 // @author       tianxin
 // @match        *://zxcs.me/sort/*
 // @match        *://zxcs.me/post/*
@@ -37,6 +38,7 @@
 // @match        *://www.ixuanquge.com/search.html
 // @match        *://www.ixuanquge.com/top/*
 // @match        *://www.wanbentxt.com/*
+// @match        *://www.yuzuhon.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @connect      www.yousuu.com
@@ -56,7 +58,7 @@
 // @connect      www.auzw.com
 // @connect      www.mianhuatang.cc
 // @connect      www.balingtxt.com
-// @version      0.6.5
+// @version      0.7
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
@@ -78,6 +80,11 @@ const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
 const DOWNLOAD_SITES_EXCEPTED = [
     'wanbentxt',
 ];
+
+// 无法获取 ready 事件的网站
+const SITES_WAIT_KEY_ELEMENT = {
+    "www.yuzuhon.com": "#__layout > div > div.app-main > div > div.container > div.book-info-section",
+}
 /*======================================================================================================*/
 
 /*================================================  类  ================================================*/
@@ -290,6 +297,13 @@ const rateSiteTargetRoute = {
         let prefix = 'wanbentxt.';
         //详情页(/数字/)
         if (/\/(\d)+\//.test(pathname)) {
+            return prefix + 'detail';
+        }
+    },
+    'www.yuzuhon.com': () => {
+        let pathname = location.pathname;
+        let prefix = 'yuzuhon.';
+        if (/^\/book\/\d+$/.test(pathname)) {
             return prefix + 'detail';
         }
     }
@@ -577,6 +591,84 @@ const rateSiteTargetConfig = {
             });
         },
     },
+    'yuzuhon.detail': {
+        name: 'yuzuhon.detail',
+        bookName(item) {
+            return item.querySelector("#__layout > div > div.app-main > div > div.container > div.book-info-section > h2").innerText;
+        },
+        bookAuthor(item) {
+            return item.querySelector("#__layout > div > div.app-main > div > div.container > div.book-info-section > div > div.book-info__metadata > div > span > a").innerText;
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            let rateStars = this._packageStar(Math.round(rate / 2 * 10) / 10, 5);
+            return `<div style="padding: 15px 0px; border-top: 1px solid rgb(234, 234, 234);">
+                        <span class="text-secondary"><a href="${bookLink}" target="_blank">优书网</a></span>
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="book-info__rate"><strong>${rate}</strong></div>
+                            <div class="book-info__star">
+                                <div class="rate">
+                                    ${rateStars}
+                                </div> 
+                                <span> ${rateNum} 人评分 </span>
+                            </div>
+                        </div>
+                    </div>`;
+        },
+        anchorObj(item) {
+            return item.querySelector("#__layout > div > div.app-main > div > div.container > div.book-info-section > div > div.book-info__rate-block.mb-3");
+        },
+        anchorPos: "beforeend",
+        handler(options, callback) {
+            callback({ site: this.name, item: document, ...options });
+        },
+        _fullStar() {
+            return `<span class="el-rate__item" style="cursor: auto;">
+                        <i class="el-rate__icon el-icon-star-on" style="color: rgb(235, 159, 43);"></i>
+                    </span>`;
+        },
+        _halfStar() {
+            return `<span class="el-rate__item" style="cursor: auto;">
+                        <i class="el-rate__icon el-icon-star-on" style="color: rgb(218, 218, 218);">
+                            <i class="el-rate__decimal el-icon-star-on" style="color: rgb(235, 159, 43); width: 50%;"></i>
+                        </i>
+                    </span>`;
+        },
+        _emptyStar() {
+            return `<span class="el-rate__item" style="cursor: auto;">
+                        <i class="el-rate__icon el-icon-star-on" style="color: rgb(218, 218, 218);"></i>
+                    </span>`;
+        },
+        _starsTemplate(rate, total, stars) {
+            return `<div class="rate">
+                        <div role="slider" aria-valuenow="${rate}" aria-valuetext="" aria-valuemin="0" aria-valuemax="${total}" tabindex="0" class="el-rate">
+                            ${stars}
+                        </div> 
+                    </div> `;
+        },
+        _packageStar(rate, total) {
+            let stars = '';
+            if (rate < 0) {
+                for (let i = 0; i < total; i++) {
+                    stars += this._emptyStar();
+                }
+                return this._starsTemplate(rate, total, stars);
+            }
+            let fullStars = Math.floor(rate);
+            let emptyStars = total - Math.ceil(rate);
+            let halfStars = total - fullStars - emptyStars;
+            for (let i = 0; i < fullStars; i++) {
+                stars += this._fullStar();
+            }
+            for (let j = 0; j < halfStars; j++) {
+                stars += this._halfStar();
+            }
+            for (let k = 0; k < emptyStars; k++) {
+                stars += this._emptyStar();
+            }
+            return this._starsTemplate(rate, total, stars);
+        },
+    },
 };
 
 /**
@@ -854,10 +946,10 @@ const downloadSiteSourceConfig = {
             return item.querySelector('a').innerText;
         },
         bookAuthor(item) {
-            return item.lastChild.textContent.slice(1,-1);
+            return item.lastChild.textContent.slice(1, -1);
         },
         bookLink(item) {
-            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+            return this.host + item.querySelector('a').href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
             return this.bookLink(item);
@@ -890,10 +982,10 @@ const downloadSiteSourceConfig = {
             return item.querySelector("p.nowrap > a").innerText;
         },
         bookLink(item) {
-            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+            return this.host + item.querySelector('a').href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
-            return this.host + item.querySelector('small > a').href.replace(location.origin,'').replace(this.host,'');
+            return this.host + item.querySelector('small > a').href.replace(location.origin, '').replace(this.host, '');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
@@ -926,7 +1018,7 @@ const downloadSiteSourceConfig = {
             return item.children[2].innerText;
         },
         bookLink(item) {
-            return this.host + item.querySelector('a').href.replace(location.origin,'').replace(this.host,'');
+            return this.host + item.querySelector('a').href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
             let bookId = this.bookLink(item).match(/\/(\d+)\/$/)[1];
@@ -963,10 +1055,10 @@ const downloadSiteSourceConfig = {
             return item.querySelector("p > a").innerText;
         },
         bookLink(item) {
-            return this.host + item.querySelector('a.bookname').href.replace(location.origin,'').replace(this.host,'');
+            return this.host + item.querySelector('a.bookname').href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
-            return this.bookLink(item).replace('.html','/down.html');
+            return this.bookLink(item).replace('.html', '/down.html');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
@@ -988,7 +1080,10 @@ const downloadSiteSourceConfig = {
 const downloadSiteTargetRoute = {
     'www.yousuu.com': () => {
         return 'yousuu';
-    }
+    },
+    'www.yuzuhon.com': () => {
+        return 'yuzuhon';
+    },
 };
 
 /**
@@ -997,6 +1092,7 @@ const downloadSiteTargetRoute = {
 const downloadSiteTargetConfig = {
     'yousuu': {
         name: 'yousuu',
+        siteName: '优书网',
         _utils: {},
         //预处理
         prepare() {
@@ -1028,6 +1124,49 @@ const downloadSiteTargetConfig = {
             obj.insertAdjacentHTML('beforeend', item);
         },
     },
+    'yuzuhon': {
+        name: 'yuzuhon',
+        siteName: '柚子书',
+        //预处理
+        prepare() {
+            let content =
+                `<section class="book-page__section mt-5" id="gm-insert-download-box" style="display: none">
+                    <div class="section-head pl-0 border-0">
+                        <h2 class="section-head__title">下载地址</h2>
+                    </div>
+                    <div class="rich-content is-collapsed">
+                        <div class="font" id="gm-insert-download-content">
+                        </div>
+                    </div>
+                </section>`;
+            //插入下载容器
+            document.querySelector('#__layout > div > div.app-main > div > div.container > div > section').insertAdjacentHTML('afterend', content);
+        },
+        bookName() {
+            return document.querySelector("#__layout > div > div.app-main > div > div.container > div.book-info-section > h2").innerText;
+        },
+        bookAuthor() {
+            return document.querySelector("#__layout > div > div.app-main > div > div.container > div.book-info-section > div > div.book-info__metadata > div > span > a").innerText;
+        },
+        //获取下载链接后的处理
+        task(info) {
+            let obj = document.querySelector('#gm-insert-download-content');
+            let box = document.querySelector('#gm-insert-download-box');
+            let item = '';
+            //如果第一次插入,则显示父容器，同时插入标识
+            if (box.style.display === 'none') {
+                box.setAttribute('style', 'display:run-in');
+                item = `<a href="${info.downloadLink}" target="_blank" class="">${info.siteName}</a>`;
+            } else {
+                item =
+                    `<span>
+                        <span class="dot"></span>
+                        <a href="${info.downloadLink}" target="_blank" class="">${info.siteName}</a>
+                    </span> `;
+            }
+            obj.insertAdjacentHTML('beforeend', item);
+        },
+    }
 }
 
 /*======================================================================================================*/
@@ -1227,7 +1366,7 @@ let insertDownload = async (options) => {
  */
 let insertBookDownloadLink = async (hostname) => {
     if (Object.keys(downloadSiteTargetRoute).includes(hostname)) {
-        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig),DOWNLOAD_SITES_EXCEPTED);
+        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig), DOWNLOAD_SITES_EXCEPTED);
         let downloadTargetSite = downloadSiteTargetRoute[hostname]();
         let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
         targetConfig.prepare();
@@ -1254,22 +1393,46 @@ let checkCanUse = () => {
 let isTampermonkey = () => {
     return (GM_info || { scriptHandler: '' }).scriptHandler.toLowerCase() === SCRIPT_HANDLER_TAMPERMONKEY;
 }
+
+/**
+ * 开始执行脚本
+ */
+let start = () => {
+    'use strict';
+    //检查兼容性
+    let checkResult = checkCanUse();
+    if (!checkResult.canUse) {
+        alert(checkResult.message);
+        return;
+    }
+    //插入评分
+    insertBookRate(location.hostname);
+    //插入下载链接
+    insertBookDownloadLink(location.hostname);
+}
+
+/**
+ * 延时执行脚本
+ * @param {integer} interval 
+ */
+let startWithInterval = (interval) => {
+    window.setTimeout(start, interval);
+}
+
+/**
+ * 当前站点是否触发 ready 事件
+ * @param {string} hostname 
+ */
+let isSiteTriggerReadyEvent = (hostname) => {
+    return !Object.keys(SITES_WAIT_KEY_ELEMENT).includes(hostname);
+}
 /*======================================================================================================*/
 /**
  * 入口
  */
-$(document).ready(() => {
-    window.setTimeout(() => {
-        'use strict';
-        //检查兼容性
-        let checkResult = checkCanUse();
-        if (!checkResult.canUse) {
-            alert(checkResult.message);
-            return;
-        }
-        //插入评分
-        insertBookRate(location.hostname);
-        //插入下载链接
-        insertBookDownloadLink(location.hostname);
-    }, 1000)
-});
+
+if (isSiteTriggerReadyEvent(location.hostname)) {
+    $().ready(startWithInterval(1000));
+} else {
+    waitForKeyElements(SITES_WAIT_KEY_ELEMENT[location.hostname], () => startWithInterval(1000));
+}
