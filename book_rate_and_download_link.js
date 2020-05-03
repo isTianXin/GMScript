@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优书网 <=> 知轩藏书
 // @namespace    http://tampermonkey.net/
-// @description  [知轩藏书/早安电子书/书荒网]添加优书网评分和直链，优书网书籍详情页添加[知轩藏书/早安电子书/龙凤互联/书荒网]下载链接
+// @description  [知轩藏书/早安电子书/书荒网/柚子书]添加优书网评分和直链，[优书网/柚子书]书籍详情页添加[知轩藏书/早安电子书/龙凤互联/书荒网]下载链接
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.js
 // @require      https://greasyfork.org/scripts/40003-pajhome-md5-min/code/PajHome-MD5-min.js
 // @require      https://cdn.jsdelivr.net/npm/gbk.js@0.3.0/dist/gbk.min.js
