@@ -41,6 +41,7 @@
 // @match        *://www.yuzuhon.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
+// @grant        GM_registerMenuCommand
 // @connect      www.yousuu.com
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
@@ -1186,6 +1187,14 @@ let arrayDiff = (firstArray, secondArray) => {
     return [...firstArray].filter(item => !set.has(item));
 }
 
+/**
+ * 替换空字符
+ * @param {string} value 
+ * @param {string} replace 
+ */
+let replaceEmpty = (value, replace = '') => {
+    return (value || '').replace(/\s/ig, replace);
+}
 /*=====================================================================================================*/
 
 
@@ -1426,10 +1435,38 @@ let startWithInterval = (interval) => {
 let isSiteTriggerReadyEvent = (hostname) => {
     return !Object.keys(SITES_WAIT_KEY_ELEMENT).includes(hostname);
 }
+
+/**
+ * 读取用户输入
+ * @param {string} hint 提示语
+ * @param {boolean} loopUntilNotBlank 循环读取直到输入非空值或取消
+ */
+let inputFromUser = (hint = '', loopUntilNotBlank = false) => {
+    //取消时返回 null
+    let value = window.prompt(hint);
+    if (value === null) {
+        throw new "User interrupt";
+    }
+    let valueString = replaceEmpty(value);
+    while (loopUntilNotBlank && valueString === '') {
+        window.alert("请输入非空值或取消");
+        value = window.prompt(hint);
+        if (value === null) {
+            throw new "User interrupt";
+        }
+        valueString = replaceEmpty(value);
+    }
+    return valueString;
+}
 /*======================================================================================================*/
 /**
  * 入口
  */
+
+GM_registerMenuCommand('搜索', () => {
+    let name = inputFromUser('请输入小说名: ', true);
+    let author = inputFromUser('请输入作者名: ', true)
+}, 't');
 
 if (isSiteTriggerReadyEvent(location.hostname)) {
     $().ready(startWithInterval(1000));
