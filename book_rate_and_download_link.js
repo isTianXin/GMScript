@@ -1087,7 +1087,7 @@ const downloadSiteSourceConfig = {
             return item.innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.innerText.match(/(?<=作者[:|：]).*/g)[0];
+            return item.innerText.match(/[:：](.*)/)[1];
         },
         bookLink(item) {
             return item.href.replace(location.origin, '');
@@ -1120,7 +1120,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector("header > h1").innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector("header > h1").innerText.match(/(?<=作者[:|：]).*/g)[0];
+            return item.querySelector("header > h1").innerText.match(/[:：](.*)/)[1];
         },
         bookLink(item) {
             //实际是下载链接
