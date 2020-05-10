@@ -58,12 +58,14 @@
 // @connect      www.auzw.com
 // @connect      www.mianhuatang.cc
 // @connect      www.balingtxt.com
-// @version      0.7
+// @connect      www.dushuxiaozi.com
+// @connect      jingjiaocangshu.cn
+// @version      0.7.1
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
-// 下载链接缓存时间，默认15天
-const DOWNLOAD_EXPIRED_TIME = 86400 * 7 * 1000;
+// 下载链接缓存时间，默认1天
+const DOWNLOAD_EXPIRED_TIME = 86400 * 1000;
 // 优书网评分缓存时间，默认1天
 const SEARCH_EXPIRED_TIME = 86400 * 1000;
 // 优书网最大搜索数目，默认5个
@@ -1062,6 +1064,73 @@ const downloadSiteSourceConfig = {
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_PROCESS })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'dushuxiaozi': {
+        name: 'dushuxiaozi',
+        siteName: '读书小子',
+        host: 'https://www.dushuxiaozi.com',
+        searchConfig(args) {
+            return { url: this.host + '/?s=' + args.bookName, method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll("#main > ul > li.entry-title > a"));
+        },
+        bookName(item) {
+            return item.innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.innerText.match(/(?<=作者[:|：]).*/g)[0];
+        },
+        bookLink(item) {
+            return item.href.replace(location.origin, '');
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'jingjiaocangshu': {
+        name: 'jingjiaocangshu',
+        siteName: '精校藏书',
+        host: 'https://jingjiaocangshu.cn',
+        searchConfig(args) {
+            return { url: this.host + '/?s=' + args.bookName, method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll("#primary-home > article"));
+        },
+        bookName(item) {
+            return item.querySelector("header > h1").innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.querySelector("header > h1").innerText.match(/(?<=作者[:|：]).*/g)[0];
+        },
+        bookLink(item) {
+            //实际是下载链接
+            return this.host + item.querySelector("div.entry-content > div > div > a").href.replace(location.origin, '').replace(this.host, '');
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
         },
         parse(bookInfo, handler, response) {
             return parseRawDownloadResponse(bookInfo, handler, response);
