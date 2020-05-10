@@ -60,7 +60,7 @@
 // @connect      www.balingtxt.com
 // @connect      www.dushuxiaozi.com
 // @connect      jingjiaocangshu.cn
-// @version      0.7.1
+// @version      0.7.2
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
