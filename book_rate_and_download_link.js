@@ -60,7 +60,8 @@
 // @connect      www.balingtxt.com
 // @connect      www.dushuxiaozi.com
 // @connect      jingjiaocangshu.cn
-// @version      0.7.1.1
+// @connect      www.kenshula.com
+// @version      0.7.2
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
@@ -1125,6 +1126,65 @@ const downloadSiteSourceConfig = {
         bookLink(item) {
             //实际是下载链接
             return this.host + item.querySelector("div.entry-content > div > div > a").href.replace(location.origin, '').replace(this.host, '');
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'lenshula': {
+        name: 'kenshula',
+        siteName: '啃书啦',
+        host: 'https://www.kenshula.com',
+        _isBookList: false,
+        _isBookListChecked: false,
+        _isCurrentBookList(item) {
+            //如果匹配到的搜索结果只有一条, 会直接进入对应的书籍详情页，因此需要判断一下
+            if (!this._isBookListChecked) {
+                this._isBookList = item.querySelector('#conn > div > div.fleft.column-l > div > div.search-title');
+                this._isBookListChecked = true;
+            }
+            return this._isBookList;
+        },
+        searchConfig(args) {
+            let data = 'area=2&searchkey=' + GBK.URI.encodeURI(args.bookName);
+            let headers = { "Content-Type": "application/x-www-form-urlencoded" };
+            return { url: this.host + '/modules/article/search.php', data: data, method: 'POST', headers: headers, overrideMimeType: 'text/html;charset=gbk', anonymous: true };
+
+        },
+        bookList(item) {
+            if (this._isCurrentBookList(item)) {
+                return Array.from(item.querySelectorAll('#conn > div > div.fleft.column-l > div > ul > li'));
+            }
+            return Array.from(item.querySelectorAll('head'));
+
+        },
+        bookName(item) {
+            if (this._isCurrentBookList(item)) {
+                return item.querySelector("div > h3 > a").innerText;
+            }
+            return item.querySelector('meta[property="og:novel:book_name"]').getAttribute("content");
+        },
+        bookAuthor(item) {
+            if (this._isCurrentBookList(item)) {
+                return item.querySelector("p.author").lastChild.wholeText;
+            }
+            return item.querySelector('meta[property="og:novel:author"]').getAttribute("content");
+        },
+        bookLink(item) {
+            if (this._isCurrentBookList(item)) {
+                return this.host + item.querySelector("div > h3 > a").href.replace(location.origin, '').replace(this.host, '');
+            }
+            return item.querySelector('meta[property="og:novel:read_url"]').getAttribute("content");
         },
         downloadLink(item) {
             return this.bookLink(item);
