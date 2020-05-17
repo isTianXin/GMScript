@@ -61,7 +61,7 @@
 // @connect      www.dushuxiaozi.com
 // @connect      jingjiaocangshu.cn
 // @connect      www.kenshula.com
-// @version      0.7.2
+// @version      0.8.0
 // ==/UserScript==
 
 /*================================================= 常量 ================================================*/
@@ -1203,6 +1203,69 @@ const downloadSiteSourceConfig = {
 };
 
 /**
+ * 其他链接来源的相关配置
+ */
+const linkSiteSourceConfig = {
+    'baike': {
+        name: 'baike',
+        siteName: '百度百科',
+        link(info) {
+            return 'https://baike.baidu.com/search?word=' + info.bookName;
+        },
+    }
+}
+
+/**
+ * 需要添加其他链接的网站路由
+ * 转换为 downloadSiteTargetConfig 的键名
+ */
+const linkSiteTargetRoute = {
+    'www.yousuu.com': () => {
+        return 'yousuu';
+    },
+};
+
+/**
+ * 需要添加其他链接的网站配置
+ */
+const linkSiteTargetConfig = {
+    'yousuu': {
+        name: 'yousuu',
+        siteName: '优书网',
+        _utils: {},
+        //预处理
+        prepare() {
+            //获取dataV的值
+            let node = Array.from(document.querySelectorAll('div.common-card-layout.main-left-header')).pop();
+            let dataV = node.outerHTML.match(/data-v-(\w+)/g);
+            this._utils.dataV = dataV;
+            //插入下载容器
+            let content = '<div ' + dataV[0] + '="" class="common-card-layout main-left-header" id="gm-insert-link-box" style="display: none">'
+                + '<div ' + dataV[1] + '="" ' + dataV[2] + '="" class="tabs" id="gm-insert-link-content"></div></div>';
+            document.querySelector('div.common-card-layout.main-left-header').insertAdjacentHTML('beforebegin', content);
+        },
+        bookName() {
+            return document.querySelector('div.book-info-wrap>div.book-info-detail>h1.book-name').innerText;
+        },
+        bookAuthor() {
+            return document.querySelector('div.book-info-wrap>div.book-info-detail>p.book-author>a').innerText;
+        },
+        //获取下载链接后的处理
+        task(info) {
+            let obj = document.querySelector('#gm-insert-link-content');
+            let item = '';
+            //如果第一次插入,则显示父容器，同时插入标识
+            if (obj.parentElement.style.display === 'none') {
+                obj.parentElement.setAttribute('style', 'display:run-in');
+                item = '<label ' + this._utils.dataV[3] + '="" class="tab current">链接</label>';
+            }
+            item += '<label ' + this._utils.dataV[3] + '="" class="tab"><a href="' + info.link + '" target="_blank">' + info.siteName + '</a></label>';
+            obj.insertAdjacentHTML('beforeend', item);
+        },
+    },
+}
+
+/**
  * 需要添加下载链接的网站路由
  * 转换为 downloadSiteTargetConfig 的键名
  */
@@ -1504,6 +1567,37 @@ let insertBookDownloadLink = async (hostname) => {
     }
 }
 
+/**
+ * 从来源处解析并插入链接
+ * @param {String} site 
+ * @param {Object} bookInfo 
+ */
+let insertLinkFromSource = async (site, targetConfig) => {
+    let siteConfig = linkSiteSourceConfig[site];
+    let bookName = targetConfig.bookName();
+    let bookAuthor = targetConfig.bookAuthor();
+    if (!bookName || !bookAuthor) {
+        return;
+    }
+    let bookInfo = { bookName: bookName, bookAuthor: bookAuthor };
+    let link = siteConfig.link(bookInfo);
+    targetConfig.task({ link: link, siteName: siteConfig.siteName });
+}
+/**
+ * 
+ * 插入下载链接
+ * @param {String} hostname 
+ */
+let insertLinks = async (hostname) => {
+    if (!Object.keys(linkSiteTargetRoute).includes(hostname)) {
+        return;
+    }
+    let targetConfig = linkSiteTargetConfig[linkSiteTargetRoute[hostname]()];
+    targetConfig.prepare();
+    let promises = Object.keys(linkSiteSourceConfig).map((site) => insertLinkFromSource(site, targetConfig).catch(e => console.log(e)));
+    await Promise.all(promises);
+}
+
 /*=====================================================================================================*/
 
 /**
@@ -1538,6 +1632,8 @@ let start = () => {
     insertBookRate(location.hostname);
     //插入下载链接
     insertBookDownloadLink(location.hostname);
+    //插入其他链接
+    insertLinks(location.hostname);
 }
 
 /**
