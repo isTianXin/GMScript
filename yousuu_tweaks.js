@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         优书网小工具
 // @namespace    https://github.com/isTianXin/GMScript
-// @description  优书网小工具集合
+// @description  优书网小工具
 // @require      http://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.js
 // @author       tianxin
 // @match        *://www.yousuu.com/book/*
