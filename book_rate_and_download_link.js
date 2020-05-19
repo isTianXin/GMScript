@@ -60,7 +60,7 @@
 // @connect      www.dushuxiaozi.com
 // @connect      jingjiaocangshu.cn
 // @connect      www.kenshula.com
-// @version      0.8.0
+// @version      0.8.1
 // @run-at       document-end
 // ==/UserScript==
 
