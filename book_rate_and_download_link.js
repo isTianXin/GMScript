@@ -40,6 +40,7 @@
 // @match        *://www.yuzuhon.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
+// @grant        GM_registerMenuCommand
 // @connect      www.yousuu.com
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
@@ -1597,7 +1598,132 @@ let insertLinks = async (hostname) => {
     let promises = Object.keys(linkSiteSourceConfig).map((site) => insertLinkFromSource(site, targetConfig).catch(e => console.log(e)));
     await Promise.all(promises);
 }
+/*=====================================================================================================*/
 
+
+/*===============================================  工具  ===============================================*/
+const injectStyle = {
+    'custom_rate_score':
+        `.custom_rate_score_settings {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%,-50%);
+            z-index: 99999;
+            background: white;
+            border: 1px solid black;
+            max-height: 99vh;
+            overflow: auto;
+            color: black;
+            font-size: medium;
+        }`,
+};
+const injectHtml = {
+    'custom_rate_score':
+        `<table id="rate_weight">
+            <thead>
+                <tr>
+                    <th width="30%">评分等级</th>
+                    <th width="30%">使用评分数据</th>
+                    <th width="40%">评分数据权重(%)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <th>一星</th>
+                    <th><input type="checkbox" class="use_star" id="use_star_1"></th>
+                    <th>
+                        <input class="weight_star" style="width: 100%;box-sizing: border-box;" type="number" max="0" min="100"
+                            placeholder="0~100" step="1" id="weight_star_1">
+                    </th>
+                </tr>
+                <tr>
+                    <th>二星</th>
+                    <th><input type="checkbox" class="use_star" id="use_star_2"></th>
+                    <th>
+                        <input class="weight_star" style="width: 100%;box-sizing: border-box;" type="number" max="0" min="100"
+                            placeholder="0~100" step="1" id="weight_star_2">
+                    </th>
+                </tr>
+                <tr>
+                    <th>三星</th>
+                    <th><input type="checkbox" class="use_star" id="use_star_3"></th>
+                    <th>
+                        <input class="weight_star" style="width: 100%;box-sizing: border-box;" type="number" max="0" min="100"
+                            placeholder="0~100" step="1" id="weight_star_3">
+                    </th>
+                </tr>
+                <tr>
+                    <th>四星</th>
+                    <th><input type="checkbox" class="use_star" id="use_star_4"></th>
+                    <th>
+                        <input class="weight_star" style="width: 100%;box-sizing: border-box;" type="number" max="0" min="100"
+                            placeholder="0~100" step="1" id="weight_star_4">
+                    </th>
+                </tr>
+                <tr>
+                    <th>五星</th>
+                    <th><input type="checkbox" class="use_star" id="use_star_5"></th>
+                    <th>
+                        <input class="weight_star" style="width: 100%;box-sizing: border-box;" type="number" max="0" min="100"
+                            placeholder="0~100" step="1" id="weight_star_5">
+                    </th>
+                </tr>
+                <tr>
+                    <th colspan="3">
+                        <div style="display: flex;justify-content: center;">
+                            <button style="align-content: center;" id="rate_weight_submit">确定</button>
+                            &nbsp;&nbsp
+                            <button style="align-content: center;" id="rate_weight_cancel">取消</button>
+                        </div>
+                    </th>
+                </tr>
+            </tbody>
+        </table>`
+};
+//关闭 ui
+let cancelCustomRateUI = () => {
+    let settings = document.querySelector("#custon_rate_score_settings");
+    let useRateList = Array.from(settings.querySelectorAll(".use_star"));
+    useRateList.filter((value) => value.checked === true).map((value) => value.id.split('_').pop());
+    if (useRateList.length === 0) {
+        let message = "请至少选择一个评分等级";
+        alert(message);
+        throw message;
+    }
+    let weightStarList = Array.from(settings.querySelectorAll('.weight_star'));
+    weightStarList.filter((value) => parseInt(value.value) !== NaN).map((value) => parseInt(value.value));
+    
+    settings.remove();
+}
+//提交 ui
+let submitCustongRateSettings = () => {
+    cancelCustomRateUI();
+}
+//显示 ui
+let registerCustomRateUI = () => {
+    //插入 css
+    let styleNode = document.createElement('style');
+    styleNode.innerHTML = injectStyle.custom_rate_score;
+    document.head.appendChild(styleNode);
+    //插入 html
+    let settingsNode = document.createElement('div');
+    settingsNode.className = 'custom_rate_score_settings';
+    settingsNode.id = 'custon_rate_score_settings';
+    settingsNode.innerHTML = injectHtml.custom_rate_score;
+    document.body.appendChild(settingsNode);
+    //绑定点击事件
+    document.querySelector("#rate_weight_submit").addEventListener('click', submitCustongRateSettings);
+    document.querySelector("#rate_weight_cancel").addEventListener('click', cancelCustomRateUI);
+}
+//自定义评分
+let customRateScore = () => {
+    registerCustomRateUI();
+};
+//注册菜单
+let registerMenu = () => {
+    GM_registerMenuCommand('自定义评分', customRateScore, 'S');
+};
 /*=====================================================================================================*/
 
 /**
@@ -1628,6 +1754,7 @@ let start = () => {
         alert(checkResult.message);
         return;
     }
+    registerMenu();
     //插入评分
     insertBookRate(location.hostname);
     //插入下载链接
