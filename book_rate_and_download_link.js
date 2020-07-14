@@ -1129,7 +1129,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector("header > h1").innerText.match(/[:：](.*)/)[1];
         },
         bookLink(item) {
-            //实际是下载链接
+            //实际是下载链接 
             return this.host + item.querySelector("div.entry-content > div > div > a").href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
