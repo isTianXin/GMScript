@@ -44,6 +44,7 @@
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
 // @connect      www.nordfxs.com
+// @connect      www.zvzee.com
 // @connect      www.15huang.com
 // @connect      www.3uww.cc
 // @connect      www.mianhuatang.la
@@ -56,10 +57,12 @@
 // @connect      www.afs360.com
 // @connect      www.auzw.com
 // @connect      www.mianhuatang.cc
+// @connect      www.mhtwx.la
 // @connect      www.balingtxt.com
 // @connect      www.dushuxiaozi.com
 // @connect      jingjiaocangshu.cn
 // @connect      www.kenshula.com
+// @connect      www.wucuo8.com
 // @version      0.8.1
 // @run-at       document-end
 // ==/UserScript==
@@ -82,6 +85,8 @@ const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
 //需要排除的下载源
 const DOWNLOAD_SITES_EXCEPTED = [
     'wanbentxt',
+    'dushuxiaozi',
+    '15huang',
 ];
 
 // 无法获取 ready 事件的网站
@@ -714,7 +719,7 @@ const downloadSiteSourceConfig = {
     'nordfxs': {
         name: 'nordfxs',
         siteName: '龙凤互联',
-        host: 'https://www.nordfxs.com',
+        host: 'https://www.zvzee.com',
         searchConfig(args) {
             let data = 'formhash=191940c0&srchtxt=' + args.bookName + '&searchsubmit=yes';
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
@@ -1004,7 +1009,7 @@ const downloadSiteSourceConfig = {
     'mianhuatang': {
         name: 'mianhuatang',
         siteName: '棉花糖小说网',
-        host: 'http://www.mianhuatang.cc',
+        host: 'http://www.mhtwx.la',
         searchConfig(args) {
             let data = 'searchkey=' + args.bookName;
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
@@ -1191,6 +1196,42 @@ const downloadSiteSourceConfig = {
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'wucuo8': {
+        name: 'wucuo8',
+        siteName: '无错吧',
+        host: 'http://www.wucuo8.com',
+        searchConfig(args) {
+            let data = 'tempid=1&tbname=xs&show=writer,title&keyboard=' + args.bookName;
+            let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "swmmjlastsearchtime=" + (Date.parse(new Date) / 1000 - 480) };
+            return { url: this.host + '/e/search/index.php', data: data, method: "POST", headers: headers, anonymous: true };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll("div.main.row.box1.md > div > div > div > div"));
+        },
+        bookName(item) {
+            return item.querySelector("div.xq > div > a").innerText;
+        },
+        bookAuthor(item) {
+            return item.querySelector("div.xq > p.writer.ellipsis").innerText.split("|")[2].replace(/\s/g, '');
+        },
+        bookLink(item) {
+            return this.host + item.querySelector("div.xq > div > a").href.replace(location.origin, '').replace(this.host, '');
+        },
+        downloadLink(item) {
+            let url = item.querySelector("div.main.row.box1.md > div > div > div.col.xs-24.md-16 > div > div.col.xs-24.kuang.downloadbox.bg-bai > div > div.col.xs-24.md-9.loadbutton > a").href;
+            return this.host + url.replace(location.origin, '').replace(this.host, '');
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
         },
         parse(bookInfo, handler, response) {
             return parseRawDownloadResponse(bookInfo, handler, response);
