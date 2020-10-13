@@ -38,6 +38,11 @@
 // @match        *://www.ixuanquge.com/top/*
 // @match        *://www.wanbentxt.com/*
 // @match        *://www.yuzuhon.com/*
+// @match        *://www.zxcs.info/sort/*
+// @match        *://www.zxcs.info/post/*
+// @match        *://www.zxcs.info/author/*
+// @match        *://www.zxcs.info/tag/*
+// @match        *://www.zxcs.info/index.php?keyword=*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @connect      www.yousuu.com
@@ -63,7 +68,8 @@
 // @connect      jingjiaocangshu.cn
 // @connect      www.kenshula.com
 // @connect      www.wucuo8.com
-// @version      0.9.0
+// @connect      www.zxcs.info
+// @version      0.9.1
 // @run-at       document-end
 // ==/UserScript==
 
@@ -314,7 +320,21 @@ const rateSiteTargetRoute = {
         if (/^\/book\/\d+$/.test(pathname)) {
             return prefix + 'detail';
         }
-    }
+    },
+    'www.zxcs.info': () => {
+        let tag = location.pathname.split('/')[1];
+        let prefix = 'zxcs8.';
+        if (tag === 'post') {
+            return prefix + 'post';
+        }
+        if (['sort', 'tag', 'author'].includes(tag)) {
+            return prefix + 'sort';
+        }
+        // 搜索页面
+        if (location.pathname.includes('index.php')) {
+            return prefix + 'sort';
+        }
+    },
 };
 
 /**
@@ -327,7 +347,7 @@ const rateSiteTargetConfig = {
             return item.querySelector('h1').innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector('h1').innerText.split('：').pop();
+            return item.querySelector('h1').innerText.match('[:：](.+)')[1].trim();
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -350,7 +370,7 @@ const rateSiteTargetConfig = {
             return item.firstElementChild.innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.firstElementChild.innerText.split('：').pop();
+            return item.firstElementChild.innerText.match('[:：](.+)')[1].trim();
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -697,13 +717,15 @@ const downloadSiteSourceConfig = {
             return item.children["0"].innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.children["0"].innerText.split('：').pop();
+            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
         },
         bookLink(item) {
-            return item.children["0"].getElementsByTagName('a')[0].href;
+            let url = item.children["0"].getElementsByTagName('a')[0].href;
+            return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
-            return item.querySelector('.down_2>a').href;
+            let url = item.querySelector('.down_2>a').href;
+            return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
@@ -1228,6 +1250,41 @@ const downloadSiteSourceConfig = {
         },
         downloadLink(item) {
             let url = item.querySelector("div.main.row.box1.md > div > div > div.col.xs-24.md-16 > div > div.col.xs-24.kuang.downloadbox.bg-bai > div > div.col.xs-24.md-9.loadbutton > a").href;
+            return this.host + url.replace(location.origin, '').replace(this.host, '');
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+        // type: DOWNLOAD_TYPE_FETCH 需设置
+        fetchConfig(options) {
+            return { url: options.url, method: 'GET' };
+        },
+    },
+    'zxcsinfo': {
+        name: 'zxcsinfo',
+        siteName: '知轩藏书(info)',
+        host: 'http://www.zxcs.info',
+        searchConfig(args) {
+            return { url: this.host + '/index.php?keyword=' + args.bookName, method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.getElementsByTagName('dl'));
+        },
+        bookName(item) {
+            return item.children["0"].innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
+        },
+        bookLink(item) {
+            let url = item.children["0"].getElementsByTagName('a')[0].href;
+            return this.host + url.replace(location.origin, '').replace(this.host, '');
+        },
+        downloadLink(item) {
+            let url = item.querySelector('.down_2>a').href;
             return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         handler(options) {
