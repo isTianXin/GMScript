@@ -45,6 +45,9 @@
 // @match        *://www.zxcs.info/index.php?keyword=*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
+// @grant        GM_getValue
+// @grant        GM_setValue
+// @grant        GM_registerMenuCommand
 // @connect      www.yousuu.com
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
@@ -69,7 +72,7 @@
 // @connect      www.kenshula.com
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
-// @version      0.9.1
+// @version      0.10.0
 // @run-at       document-end
 // ==/UserScript==
 
@@ -88,12 +91,8 @@ const DOWNLOAD_TYPE_PROCESS = 3;
 //扩展名
 const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
 
-//需要排除的下载源
-const DOWNLOAD_SITES_EXCEPTED = [
-    'wanbentxt',
-    'dushuxiaozi',
-    '15huang',
-];
+//要排除的下载源key
+const EXCEPTED_DOWNLOAD_SITES_KEY = "excepted_sites";
 
 // 无法获取 ready 事件的网站
 const SITES_WAIT_KEY_ELEMENT = {
@@ -1168,7 +1167,7 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
-    'lenshula': {
+    'kenshula': {
         name: 'kenshula',
         siteName: '啃书啦',
         host: 'https://www.kenshula.com',
@@ -1562,6 +1561,44 @@ let insertBookRate = (hostname) => {
 /*=====================================================================================================*/
 
 /*===============================================  下载  ===============================================*/
+
+
+/**
+ * 获取需要排除的下载源
+ * @returns Array
+ */
+let getExpectedSites = () => {
+    let sites = GM_getValue(EXCEPTED_DOWNLOAD_SITES_KEY, []);
+    return Array.isArray(sites) ? sites : [];
+}
+/**
+ * 排除下载源
+ */
+let exceptDownloadSites = () => {
+    let sites = getExpectedSites().map((site) => {
+        return downloadSiteSourceConfig[site]?.siteName || "";
+    }).filter(site => site != null && site != undefined);
+
+    let input = prompt("请输入要排除的下载站(下载地址中的网站名,逗号分隔):", sites.join(",") || "");
+    if (input == null || input == undefined) {
+        return;
+    }
+
+    let siteNameMap = new Map();
+    for (const [key, value] of Object.entries(downloadSiteSourceConfig)) {
+        siteNameMap.set(value.siteName, key);
+    }
+
+    let savedSites = input.split(/[,，]/).map((item) => {
+        return siteNameMap.get(item.trim());
+    }).filter((item) => item != null && item != undefined);
+
+    GM_setValue(EXCEPTED_DOWNLOAD_SITES_KEY, savedSites);
+
+    if(confirm("刷新当前页面?")){
+       window.location.reload();
+    }
+};
 /**
  * 解析下载链接
  * @param options
@@ -1656,7 +1693,7 @@ let insertDownload = async (options) => {
  */
 let insertBookDownloadLink = async (hostname) => {
     if (Object.keys(downloadSiteTargetRoute).includes(hostname)) {
-        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig), DOWNLOAD_SITES_EXCEPTED);
+        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig), getExpectedSites());
         let downloadTargetSite = downloadSiteTargetRoute[hostname]();
         let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
         targetConfig.prepare();
@@ -1698,6 +1735,14 @@ let insertLinks = async (hostname) => {
 
 /*=====================================================================================================*/
 
+/*===============================================  UI  ===============================================*/
+
+/**
+ * 注册菜单
+ */
+let registerMenu = () => {
+    GM_registerMenuCommand('排除不需要的下载源', exceptDownloadSites, 'E');
+};
 /**
  * 检查插件兼容性
  */
@@ -1753,7 +1798,7 @@ let isSiteTriggerReadyEvent = (hostname) => {
 /**
  * 入口
  */
-
+registerMenu();
 if (isSiteTriggerReadyEvent(location.hostname)) {
     startWithInterval(1000);
 } else {
