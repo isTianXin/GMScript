@@ -285,7 +285,6 @@ document.onclick = e => {
     //搜索全部区县 onclick
     if (e.target.id === SEARCH_ALL_REGIONS_BUTTON) {
         let clicked = false;
-        console.log(clicked);
         if(!clicked){
             searchAllRegions();
             clicked = true;
