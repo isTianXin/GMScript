@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         政务网增强
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.0
+// @version      1.0.1
 // @description  山东政务网增强:一键搜索全部区县，回车搜索
 // @author       Tian Xin
 // @match        *://*.sd.gov.cn/*
@@ -94,7 +94,7 @@ let extractApproveInfoFromXlYinTableRow = (tr) => {
     return {
         name: aLabel.innerText,
         url: aLabel.href,
-        department: tds[2]?.innerText || ""
+        department: tds[2].innerText || ""
     };
 }
 /**
@@ -178,7 +178,7 @@ const themeMap = {
 //组装请求参数
 let packageRequestParams = (region) => {
     //事项分类
-    let ql = document.querySelector(".xzsxflall")?.id || -1;
+    let ql = document.querySelector(".xzsxflall").id || -1;
     //事项主题
     let theme = document.querySelector("#theme").value;
     let othertheme = themeMap[theme] || "";
@@ -249,7 +249,7 @@ let injectSearchAllButton = () => {
         </td>
     </tr>
     `;
-    let row = document.querySelector("#sxxzk > tbody")?.insertRow();
+    let row = document.querySelector("#sxxzk > tbody").insertRow();
     if (!row) {
         return;
     }
@@ -279,7 +279,7 @@ document.onkeydown = function (e) {
 }
 document.onclick = e => {
     //搜索全部区县 onclick
-    if (e?.target?.id === SEARCH_ALL_REGIONS_BUTTON) {
+    if (e.target.id === SEARCH_ALL_REGIONS_BUTTON) {
         searchAllRegions();
     }
 };
