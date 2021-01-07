@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         政务网增强
+// @name         山东政务网增强
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.0.1
+// @version      1.0.2
 // @description  山东政务网增强:一键搜索全部区县，回车搜索
 // @author       Tian Xin
 // @match        *://*.sd.gov.cn/*
@@ -249,7 +249,11 @@ let injectSearchAllButton = () => {
         </td>
     </tr>
     `;
-    let row = document.querySelector("#sxxzk > tbody").insertRow();
+    let table = document.querySelector("#sxxzk > tbody");
+    if(!table){
+        return;
+    }
+    let row = table.insertRow();
     if (!row) {
         return;
     }
@@ -272,9 +276,9 @@ startWithInterval(1000);
 
 document.onkeydown = function (e) {
     //按下 enter 键并且聚焦在 “按事项名称：” 后面的输入框内
-    if (e.code.toLocaleLowerCase() === 'enter' && document.activeElement.id === ITEM_INPUT_ID) {
+    if (e.code && e.code.toLocaleLowerCase() === 'enter' && document.activeElement.id === ITEM_INPUT_ID) {
         //点击搜索键
-        document.querySelector("#sxxzk > tbody > tr:nth-child(2) > td > input[type=image]:nth-child(5)").onclick();
+        document.querySelector("#sxxzk > tbody > tr:nth-child(2) > td > input[type=image]:nth-child(5)").click();
     }
 }
 document.onclick = e => {
