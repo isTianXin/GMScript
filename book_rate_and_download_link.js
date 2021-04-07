@@ -49,6 +49,7 @@
 // @grant        GM_setValue
 // @grant        GM_registerMenuCommand
 // @connect      www.yousuu.com
+// @connect      api.yousuu.com
 // @connect      www.zxcs.me
 // @connect      www.zadzs.com
 // @connect      www.nordfxs.com
@@ -72,7 +73,7 @@
 // @connect      www.kenshula.com
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
-// @version      0.10.0
+// @version      0.10.3
 // @run-at       document-end
 // ==/UserScript==
 
@@ -212,7 +213,7 @@ const rateSiteSourceConfig = {
         request(bookInfo) {
             return {
                 method: "GET",
-                url: 'http://www.yousuu.com/api/search/?type=title&value=' + bookInfo.bookName,
+                url: 'https://api.yousuu.com/api/search/?type=title&value=' + bookInfo.bookName,
             }
         },
         //解析
@@ -1398,7 +1399,15 @@ const downloadSiteTargetConfig = {
             return document.querySelector('div.book-info-wrap>div.book-info-detail>h1.book-name').innerText;
         },
         bookAuthor() {
-            return document.querySelector('div.book-info-wrap>div.book-info-detail>p.book-author>a').innerText;
+            let author = document.querySelector('div.book-info-wrap>div.book-info-detail>p.book-author>a').innerText;
+            if (!author) {
+                return '';
+            }
+            let text = author.match('[:：](.+)');
+            if (!text) {
+                return author;
+            }
+            return text[1].trim();
         },
         //获取下载链接后的处理
         task(info) {
@@ -1595,8 +1604,8 @@ let exceptDownloadSites = () => {
 
     GM_setValue(EXCEPTED_DOWNLOAD_SITES_KEY, savedSites);
 
-    if(confirm("刷新当前页面?")){
-       window.location.reload();
+    if (confirm("刷新当前页面?")) {
+        window.location.reload();
     }
 };
 /**
