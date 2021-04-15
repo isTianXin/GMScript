@@ -2,7 +2,7 @@
 // @name         HPJAV Enhance
 // @namespace    https://github.com/isTianXin/GMScript/
 // @version      1.0
-// @description  HPJAV Enhance
+// @description  Enhance hpjav.tv
 // @author       You
 // @match        *://hpjav.tv/*
 // @grant        GM_openInTab
