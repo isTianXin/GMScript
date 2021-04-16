@@ -3,8 +3,9 @@
 // @namespace    https://github.com/isTianXin/GMScript/
 // @version      1.0
 // @description  Enhance hpjav.tv
-// @author       You
-// @match        *://hpjav.tv/*
+// @author       sancunguangyin
+// @match        *://hpjav.tv/hot
+// @match        *://hpjav.tv/category/*
 // @grant        GM_openInTab
 // @grant        GM_info
 // @run-at       document-end
@@ -33,31 +34,55 @@ let adaptivedDocument = getAdaptivedDocument();
 let getTorrentFunkLink = (key) => {
     return `https://www.torrentfunk.com/all/torrents/${key}.html`;
 }
+
+let parseVideoName = (text) => {
+    if (!text) {
+        return null;
+    }
+    let names = text.split(" ");
+    if (!names || !names[0]) {
+        return null;
+    }
+    if (!names[1]) {
+        return names[0];
+    }
+    let first = names[0];
+    // like ipz-127 300mium-665
+    if (/\w+-\d+/.test(first)) {
+        return first;
+    }
+    let second = names[1];
+    // like ipz & 127
+    if (!first.includes('-')) {
+        return first + '-' + second;
+    }
+    return first;
+};
+
 let replaceDateTextWithTorrentFunkLink = (card) => {
     if (!card) {
         return;
     }
-    let name = card.querySelector("a").innerText.split(" ")[0];
+    let name = parseVideoName(card.querySelector("a").innerText);
     if (!name) {
         return;
     }
     let torrentFunkLink = getTorrentFunkLink(name);
     let date = card.lastChild.wholeText;
     card.lastChild.remove();
-    let jumpLink = `<a href=${torrentFunkLink} target="_blank">${date}</a>`;
+    let jumpLink = `<a href=${torrentFunkLink} class="torrent-link" target="_blank">${date}</a>`;
     card.insertAdjacentHTML("beforeend", jumpLink);
 }
 let insertTorrentFunkLink = () => {
-    let cards = Array.from(adaptivedDocument.querySelectorAll("#ajax-fax > div > div.entry-title"));
+    let cards = Array.from(adaptivedDocument.querySelectorAll("div > div.entry-title"));
     if (!cards) {
         return;
     }
     cards.forEach(replaceDateTextWithTorrentFunkLink);
 }
 let openAllTorrentFunkLinks = () => {
-    Array.from(adaptivedDocument.querySelectorAll("#ajax-fax > div > div.entry-title > a:nth-child(1)"))
-        .map(item => item.innerText.split(" ")[0])
-        .map(getTorrentFunkLink)
+    Array.from(adaptivedDocument.querySelectorAll("a.torrent-link"))
+        .map(item => item.href)
         .forEach(
             item => {
                 if (!item) {
@@ -70,7 +95,7 @@ let openAllTorrentFunkLinks = () => {
         );
 }
 let insertOpenAllButton = () => {
-    let buttons = adaptivedDocument.querySelector("body > section > div > div > div.category-count > span");
+    let buttons = adaptivedDocument.querySelector("div.category-count > span");
     let btn = `<a class="btn btn-sm btn-default" id="${OPEN_ALL_TORRENT_LINKS_BUTTON}" rel="nofollow">Open All Torrent Links</a>`;
     buttons.insertAdjacentHTML("afterbegin", btn);
 }
