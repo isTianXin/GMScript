@@ -16,7 +16,6 @@
  */
 let removeVipContent = () => {
     Array.from(document.querySelectorAll("div.ContentItem.AnswerItem > div.KfeCollection-AnswerTopCard-Container")).forEach((item) => {
-        console.log(item.parentElement);
         item.parentElement.parentElement.remove();
     });
 };
@@ -26,7 +25,6 @@ let removeVipContent = () => {
  */
 let removeRecommendVideo = () => {
     Array.from(document.querySelectorAll("div.Feed > div.ContentItem.ZVideoItem")).forEach((item) => {
-        console.log(item.parentElement);
         item.parentElement.parentElement.remove();
     });
 };
