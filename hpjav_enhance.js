@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         HPJAV Enhance
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.0
+// @version      1.1
 // @description  Enhance hpjav.tv
 // @author       sancunguangyin
 // @match        *://hpjav.tv/hot
@@ -52,8 +52,8 @@ let parseVideoName = (text) => {
         return first;
     }
     let second = names[1];
-    // like ipz & 127
-    if (!first.includes('-')) {
+    // like ipz, s-cute, 300miun
+    if (/^\w+(-([A-Za-z])+)?$/.test(first)) {
         return first + '-' + second;
     }
     return first;
