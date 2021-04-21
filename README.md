@@ -15,6 +15,7 @@
     - 回车搜索事项
 
 - [HPJAV Enhance](https://sleazyfork.org/zh-CN/scripts/425112-hpjav-enhance)
+  - 18+
   - [HPJAV](https://hpjav.tv)添加[TorrentFunk](https://www.torrentfunk.com)搜索页面直链 
     - 点击影片下方的日期，会打开对应的种子搜索页面。
     - 点击 Open All Torrent Links 会搜索当前页面所有影片的种子。（24个页面，浏览器可能会卡一会儿，办公室慎用。）
