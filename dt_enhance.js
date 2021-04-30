@@ -28,10 +28,19 @@ const HOUR_END = 23;
  * 下一个视频
  */
 let nextVideoConfig = {
-    video: null,
+    videoIndex: null,
     checked: false,
     paged: false,
+    pageNum: 1,
 };
+/**
+ * 获取子节点为父节点的第几个元素
+ * @param node 
+ * @returns 
+ */
+function getChildIndex(node) {
+    return Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+}
 /**
  * 正在播放的视频
  * @returns 
@@ -61,18 +70,27 @@ function getNextFromFirst() {
  * 下一个视频
  * @returns 
  */
-function nextVideo() {
+function nextVideo(query) {
+    let key = getNextVideoCacheKey(query);
+    let cachedData = GM_getValue(key);
+    console.log('CACHE:', key, cachedData);
+    if (cachedData) {
+        nextVideoConfig = cachedData;
+    }
     if (nextVideoConfig.checked) {
-        return nextVideoConfig.video;
+        return nextVideoConfig;
     }
     let playing = playingVideo();
 
     if (playing) {
         let next = getNextFromSibling(playing);
         if (next) {
-            nextVideoConfig.video = next;
+            nextVideoConfig.videoIndex = getChildIndex(next);
             nextVideoConfig.checked = true;
-            return nextVideoConfig.video;
+            nextVideoConfig.pageNum = sessionStorage.getItem('listPageNum');
+            GM_setValue(key, nextVideoConfig);
+            console.log(key, nextVideoConfig);
+            return nextVideoConfig;
         } //翻页
         if (nextVideoConfig.paged) {
             return null;
@@ -98,29 +116,45 @@ function nextVideo() {
             console.log('Unkonwn playing video');
             return null;
         }
-        let next = getNextFromFirst();
-        nextVideoConfig.video = next;
+        // let next = getNextFromFirst();
+        nextVideoConfig.videoIndex = 0;
         nextVideoConfig.checked = true;
-        return nextVideoConfig.video;
+        nextVideoConfig.pageNum = parseInt(sessionStorage.getItem('listPageNum'));
+        GM_setValue(key, nextVideoConfig);
+        console.log(key, nextVideoConfig);
+        return nextVideoConfig;
     }
 }
 /**
  * 初始化下一页配置
  */
-function initNextVideoConfig() {
-    nextVideoConfig.video = null;
+function initNextVideoConfig(query) {
+    nextVideoConfig.videoIndex = 0;
     nextVideoConfig.checked = false;
+    nextVideoConfig.paged = false;
+    nextVideoConfig.pageNum = 1;
+    // let key = getNextVideoCacheKey(query);
+    // GM_setValue(key, null);
 }
 /**
  * 跳转到下一个视频
  * @returns 
  */
-function jumpToNext() {
-    let next = nextVideo();
-    initNextVideoConfig();
+function jumpToNext(query) {
+    let key = getNextVideoCacheKey(query);
+    let next = GM_getValue(key);
+    console.log('NNN', next);
+    // let next = nextVideo(query);
+    initNextVideoConfig(query);
     console.log("Next Page", next);
     //播放下一个
-    next.firstElementChild.click();
+    if (next?.pageNum) {
+        sessionStorage.setItem('listPageNum', next.pageNum);
+    }
+    let videoIndex = next.videoIndex;
+    let video = document.querySelector("div.bottom-list-warp > div.bjCourceList-wrap > div.left-right > div.course-list-warp").children[videoIndex];
+    console.log('c', video);
+    video.firstElementChild.click();
 }
 /**
  * 获取url参数
@@ -142,6 +176,12 @@ function getExamCacheKey(query) {
         return null;
     }
     return 'EXAM:CID:' + query.get('courseId');
+}
+function getNextVideoCacheKey(query) {
+    if (!query) {
+        return null;
+    }
+    return 'NEXT:CID:' + query.get('courseId');
 }
 /**
  * 当前视频播放是否完毕
@@ -232,10 +272,11 @@ function playButton() {
  */
 function orderPlay(query) {
     //提前获取下一个视频
-    nextVideo();
+    let next = nextVideo(query);
+    console.log('n', next);
     //已经播放过或者正好播放完成,跳到下一个
     if (hasCurrentVideoStudied(query) || isCurrentVideoFinish(query)) {
-        jumpToNext();
+        jumpToNext(query);
     }
     //点击播放
     playButton().click();
