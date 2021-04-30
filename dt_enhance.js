@@ -24,6 +24,7 @@ const STUDY_STATUS_FINISHED = 2;
 const HOUR_START = 8;
 const HOUR_END = 23;
 
+const DEBUG = false;
 /**
  * 下一个视频
  */
@@ -33,6 +34,11 @@ let nextVideoConfig = {
     paged: false,
     pageNum: 1,
 };
+
+function log(...args){
+    DEBUG && console.log(args);
+}
+
 /**
  * 获取子节点为父节点的第几个元素
  * @param node 
@@ -73,7 +79,7 @@ function getNextFromFirst() {
 function nextVideo(query) {
     let key = getNextVideoCacheKey(query);
     let cachedData = GM_getValue(key);
-    console.log('CACHE:', key, cachedData);
+    log('CACHE:', key, cachedData);
     if (cachedData) {
         nextVideoConfig = cachedData;
     }
@@ -89,21 +95,21 @@ function nextVideo(query) {
             nextVideoConfig.checked = true;
             nextVideoConfig.pageNum = sessionStorage.getItem('listPageNum');
             GM_setValue(key, nextVideoConfig);
-            console.log(key, nextVideoConfig);
+            log(key, nextVideoConfig);
             return nextVideoConfig;
         } //翻页
         if (nextVideoConfig.paged) {
             return null;
         }
-        console.log('The end', playing);
+        log('The end', playing);
         let nextPage = nextPageButton();
         if (!nextPage) {
-            console.log('Cant find right button');
+            log('Cant find right button');
             return null;
         }
         //最后一页
         if (nextPage.disabled) {
-            console.log('Last page');
+            log('Last page');
             return null;
         }
         //翻页
@@ -113,7 +119,7 @@ function nextVideo(query) {
 
     } else {
         if (!nextVideoConfig.paged) {
-            console.log('Unkonwn playing video');
+            log('Unkonwn playing video');
             return null;
         }
         // let next = getNextFromFirst();
@@ -121,7 +127,7 @@ function nextVideo(query) {
         nextVideoConfig.checked = true;
         nextVideoConfig.pageNum = parseInt(sessionStorage.getItem('listPageNum'));
         GM_setValue(key, nextVideoConfig);
-        console.log(key, nextVideoConfig);
+        log(key, nextVideoConfig);
         return nextVideoConfig;
     }
 }
@@ -143,17 +149,17 @@ function initNextVideoConfig(query) {
 function jumpToNext(query) {
     let key = getNextVideoCacheKey(query);
     let next = GM_getValue(key);
-    console.log('NNN', next);
+    log('NNN', next);
     // let next = nextVideo(query);
     initNextVideoConfig(query);
-    console.log("Next Page", next);
+    log("Next Page", next);
     //播放下一个
     if (next?.pageNum) {
         sessionStorage.setItem('listPageNum', next.pageNum);
     }
     let videoIndex = next.videoIndex;
     let video = document.querySelector("div.bottom-list-warp > div.bjCourceList-wrap > div.left-right > div.course-list-warp").children[videoIndex];
-    console.log('c', video);
+    log('c', video);
     video.firstElementChild.click();
 }
 /**
@@ -189,7 +195,7 @@ function getNextVideoCacheKey(query) {
  */
 function isCurrentVideoFinish(query) {
     //是否出现重播按钮
-    let replayButton = document.querySelector("#vjs_video_420 > div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused.vjs-ended");
+    let replayButton = document.querySelector("div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused.vjs-ended");
     //播放完成标识
     if (replayButton !== null) {
         GM_setValue(getFinishedCacheKey(query), 1);
@@ -203,7 +209,7 @@ function isCurrentVideoFinish(query) {
  */
 function hasCurrentVideoFinished(query) {
     let value = GM_getValue(getFinishedCacheKey(query));
-    console.log('Finished:' + value);
+    log('Finished:' + value);
     return value !== undefined && value !== null;
 }
 /**
@@ -239,7 +245,7 @@ function exitExam(query) {
             GM_setValue(key, 1);
         }
     }
-    console.log('EXIT FROM EXAM:' + query.get('examId'));
+    log('EXIT FROM EXAM:' + query.get('examId'));
     document.querySelector("button.el-button.modelBtn.exitBtn.el-button--default.el-button--mini").click();
 }
 /**
@@ -249,7 +255,7 @@ function exitExam(query) {
  */
 function hasJumpToExamAfterFinish(query) {
     let value = GM_getValue(getExamCacheKey(query));
-    console.log('EXAM:' + value);
+    log('EXAM:' + value);
     return value !== undefined && value !== null;
 }
 /**
@@ -265,7 +271,7 @@ function hasCurrentVideoStudied(query) {
  * @returns
  */
 function playButton() {
-    return document.querySelector("#vjs_video_420 > button");
+    return document.querySelector("button.vjs-big-play-button");
 }
 /**
  * 顺序播放
@@ -273,7 +279,7 @@ function playButton() {
 function orderPlay(query) {
     //提前获取下一个视频
     let next = nextVideo(query);
-    console.log('n', next);
+    log('n', next);
     //已经播放过或者正好播放完成,跳到下一个
     if (hasCurrentVideoStudied(query) || isCurrentVideoFinish(query)) {
         jumpToNext(query);
