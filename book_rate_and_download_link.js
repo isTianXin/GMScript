@@ -56,6 +56,7 @@
 // @connect      www.zvzee.com
 // @connect      www.15huang.com
 // @connect      www.3uww.cc
+// @connect      www.ibiquta.com
 // @connect      www.mianhuatang.la
 // @connect      zhannei.baidu.com
 // @connect      www.ixdzs.com
@@ -73,7 +74,8 @@
 // @connect      www.kenshula.com
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
-// @version      0.10.3
+// @connect      www.ibiquta.com
+// @version      0.10.4
 // @run-at       document-end
 // ==/UserScript==
 
@@ -282,7 +284,7 @@ const rateSiteTargetRoute = {
         }
         return prefix + 'category';
     },
-    'www.ixuanquge.com': () => {
+    'www.ibiquta.com': () => {
         let pathname = location.pathname;
         let prefix = '3uww.';
         // 排行
@@ -637,7 +639,7 @@ const rateSiteTargetConfig = {
                             <div class="book-info__star">
                                 <div class="rate">
                                     ${rateStars}
-                                </div> 
+                                </div>
                                 <span> ${rateNum} 人评分 </span>
                             </div>
                         </div>
@@ -671,7 +673,7 @@ const rateSiteTargetConfig = {
             return `<div class="rate">
                         <div role="slider" aria-valuenow="${rate}" aria-valuetext="" aria-valuemin="0" aria-valuemax="${total}" tabindex="0" class="el-rate">
                             ${stars}
-                        </div> 
+                        </div>
                     </div> `;
         },
         _packageStar(rate, total) {
@@ -811,7 +813,7 @@ const downloadSiteSourceConfig = {
     '3uww': {
         name: '3uww',
         siteName: '炫书网',
-        host: 'https://www.ixuanquge.com',
+        host: 'https://www.ibiquta.com',
         searchConfig(args) {
             let data = 'searchkey=' + args.bookName;
             let headers = { "Content-Type": "application/x-www-form-urlencoded" };
@@ -1151,7 +1153,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector("header > h1").innerText.match(/[:：](.*)/)[1];
         },
         bookLink(item) {
-            //实际是下载链接 
+            //实际是下载链接
             return this.host + item.querySelector("div.entry-content > div > div > a").href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
@@ -1230,26 +1232,26 @@ const downloadSiteSourceConfig = {
     'wucuo8': {
         name: 'wucuo8',
         siteName: '无错吧',
-        host: 'http://www.wucuo8.com',
+        host: 'https://www.wucuo8.com',
         searchConfig(args) {
             let data = 'tempid=1&tbname=xs&show=writer,title&keyboard=' + args.bookName;
             let headers = { "Content-Type": "application/x-www-form-urlencoded", "Cookie": "swmmjlastsearchtime=" + (Date.parse(new Date) / 1000 - 480) };
             return { url: this.host + '/e/search/index.php', data: data, method: "POST", headers: headers, anonymous: true };
         },
         bookList(item) {
-            return Array.from(item.querySelectorAll("div.main.row.box1.md > div > div > div > div"));
+            return Array.from(item.querySelectorAll("div.row.md.bread.w15-1 > div > div"));
         },
         bookName(item) {
-            return item.querySelector("div.xq > div > a").innerText;
+            return item.querySelector("div.xq > h2 > a").innerText.split("t")[0];
         },
         bookAuthor(item) {
             return item.querySelector("div.xq > p.writer.ellipsis").innerText.split("|")[2].replace(/\s/g, '');
         },
         bookLink(item) {
-            return this.host + item.querySelector("div.xq > div > a").href.replace(location.origin, '').replace(this.host, '');
+            return this.host + item.querySelector("div.xq > h2 > a").href.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
-            let url = item.querySelector("div.main.row.box1.md > div > div > div.col.xs-24.md-16 > div > div.col.xs-24.kuang.downloadbox.bg-bai > div > div.col.xs-24.md-9.loadbutton > a").href;
+            let url = item.querySelector("div.col.xs-24.md-9.loadbutton > a").href;
             return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         handler(options) {
@@ -1475,8 +1477,8 @@ const downloadSiteTargetConfig = {
 
 /**
  * 数组的差集
- * @param {array} firstArray 
- * @param {array} secondArray 
+ * @param {array} firstArray
+ * @param {array} secondArray
  * @returns {array}
  */
 let arrayDiff = (firstArray, secondArray) => {
@@ -1713,8 +1715,8 @@ let insertBookDownloadLink = async (hostname) => {
 
 /**
  * 从来源处解析并插入链接
- * @param {String} site 
- * @param {Object} bookInfo 
+ * @param {String} site
+ * @param {Object} bookInfo
  */
 let insertLinkFromSource = async (site, targetConfig) => {
     let siteConfig = linkSiteSourceConfig[site];
@@ -1728,9 +1730,9 @@ let insertLinkFromSource = async (site, targetConfig) => {
     targetConfig.task({ link: link, siteName: siteConfig.siteName });
 }
 /**
- * 
+ *
  * 插入下载链接
- * @param {String} hostname 
+ * @param {String} hostname
  */
 let insertLinks = async (hostname) => {
     if (!Object.keys(linkSiteTargetRoute).includes(hostname)) {
@@ -1790,7 +1792,7 @@ let start = () => {
 
 /**
  * 延时执行脚本
- * @param {integer} interval 
+ * @param {integer} interval
  */
 let startWithInterval = (interval) => {
     window.setTimeout(start, interval);
@@ -1798,7 +1800,7 @@ let startWithInterval = (interval) => {
 
 /**
  * 当前站点是否触发 ready 事件
- * @param {string} hostname 
+ * @param {string} hostname
  */
 let isSiteTriggerReadyEvent = (hostname) => {
     return !Object.keys(SITES_WAIT_KEY_ELEMENT).includes(hostname);
