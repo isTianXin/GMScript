@@ -15,6 +15,7 @@
 // @match        *://www.zxcs.me/tag/*
 // @match        *://www.zxcs.me/index.php?keyword=*
 // @match        *://www.yousuu.com/book/*
+// @match        *://www.yousuu.com/booklist/*
 // @match        *://www.zadzs.com/txt/*
 // @match        *://www.zadzs.com/plus/search.php?*
 // @match        *://www.nordfxs.com/*
@@ -75,7 +76,7 @@
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
 // @connect      www.ibiquta.com
-// @version      0.10.4
+// @version      0.10.5
 // @run-at       document-end
 // ==/UserScript==
 
@@ -335,6 +336,13 @@ const rateSiteTargetRoute = {
         // 搜索页面
         if (location.pathname.includes('index.php')) {
             return prefix + 'sort';
+        }
+    },
+    'www.yousuu.com': () => {
+        let tag = location.pathname.split('/')[1];
+        let prefix = 'yousuu.';
+        if (tag === 'booklist') {
+            return prefix + 'booklist';
         }
     },
 };
@@ -699,6 +707,37 @@ const rateSiteTargetConfig = {
             return this._starsTemplate(rate, total, stars);
         },
     },
+    'yousuu.booklist': {
+        name: 'yousuu.booklist',
+        _utils: {},
+        prepare() {
+            //获取dataV的值
+            let node = document.querySelector('p.book-info-update');
+            let dataV = node.innerHTML.match(/data-v-(\w+)/g);
+            this._utils.dataV = dataV;
+        },
+        bookName(item) {
+            return item.querySelector('a.book-name').innerText;
+        },
+        bookAuthor(item) {
+            return item.querySelector('a.author-name.ellipsis').innerText;
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<p class="book-info-update" ${this._utils.dataV}="">评分：${rate}&nbsp;&nbsp;&nbsp;&nbsp;人数：${rateNum}</p>`
+        },
+        anchorObj(item) {
+            return item.querySelector('p.book-info-update');
+        },
+        anchorPos: "afterend",
+        handler(options, callback) {
+            this.prepare();
+            let bookList = Array.from(document.querySelectorAll('div.common-card-layout.booklist-book-item'));
+            bookList.forEach((item) => {
+                callback({ site: this.name, item: item, ...options });
+            });
+        },
+    }
 };
 
 /**
@@ -1320,8 +1359,9 @@ const linkSiteSourceConfig = {
  * 转换为 downloadSiteTargetConfig 的键名
  */
 const linkSiteTargetRoute = {
-    'www.yousuu.com': () => {
-        return 'yousuu';
+    'www.yousuu.com': {
+        isValid: () => location.pathname.split('/')[1] === 'book',
+        targetConfig: () => 'yousuu'
     },
 };
 
@@ -1370,11 +1410,14 @@ const linkSiteTargetConfig = {
  * 转换为 downloadSiteTargetConfig 的键名
  */
 const downloadSiteTargetRoute = {
-    'www.yousuu.com': () => {
-        return 'yousuu';
+    'www.yousuu.com': {
+        isValid: () => location.pathname.split('/')[1] === 'book',
+        targetConfig: () => 'yousuu'
+
     },
-    'www.yuzuhon.com': () => {
-        return 'yuzuhon';
+    'www.yuzuhon.com': {
+        isValid: () => true,
+        targetConfig: () => 'yuzuhon'
     },
 };
 
@@ -1544,6 +1587,7 @@ let getRateInfo = async (handler, bookInfo) => {
 let insertRate = async (options) => {
     let siteConfig = rateSiteTargetConfig[options.site];
     let args = { bookName: siteConfig.bookName(options.item), bookAuthor: siteConfig.bookAuthor(options.item), maxNum: siteConfig.maxNum };
+
     let data = await getRateInfo(rateSiteSourceConfig[options.rateSourceSite], args);
     if (data.match) {
         siteConfig.anchorObj(options.item).insertAdjacentHTML(siteConfig.anchorPos, siteConfig.rateItem(data.score, data.num, data.url));
@@ -1703,14 +1747,19 @@ let insertDownload = async (options) => {
  * @param hostname
  */
 let insertBookDownloadLink = async (hostname) => {
-    if (Object.keys(downloadSiteTargetRoute).includes(hostname)) {
-        let sites = arrayDiff(Object.keys(downloadSiteSourceConfig), getExpectedSites());
-        let downloadTargetSite = downloadSiteTargetRoute[hostname]();
-        let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
-        targetConfig.prepare();
-        let promises = sites.map((site) => insertDownload({ site: site, downloadTargetSite: downloadTargetSite }).catch(e => console.log(e)));
-        await Promise.all(promises);
+    if (!Object.keys(downloadSiteTargetRoute).includes(hostname)) {
+        return;
     }
+    let sites = arrayDiff(Object.keys(downloadSiteSourceConfig), getExpectedSites());
+    let targetRoute = downloadSiteTargetRoute[hostname];
+    if (!targetRoute.isValid()) {
+        return;
+    }
+    let downloadTargetSite = targetRoute.targetConfig();
+    let targetConfig = downloadSiteTargetConfig[downloadTargetSite];
+    targetConfig.prepare();
+    let promises = sites.map((site) => insertDownload({ site: site, downloadTargetSite: downloadTargetSite }).catch(e => console.log(e)));
+    await Promise.all(promises);
 }
 
 /**
@@ -1738,7 +1787,11 @@ let insertLinks = async (hostname) => {
     if (!Object.keys(linkSiteTargetRoute).includes(hostname)) {
         return;
     }
-    let targetConfig = linkSiteTargetConfig[linkSiteTargetRoute[hostname]()];
+    let targetRoute = linkSiteTargetRoute[hostname];
+    if (!targetRoute.isValid()) {
+        return;
+    }
+    let targetConfig = linkSiteTargetConfig[targetRoute.targetConfig()];
     targetConfig.prepare();
     let promises = Object.keys(linkSiteSourceConfig).map((site) => insertLinkFromSource(site, targetConfig).catch(e => console.log(e)));
     await Promise.all(promises);
