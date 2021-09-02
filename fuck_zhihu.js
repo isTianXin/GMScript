@@ -34,7 +34,6 @@ let removeRecommendVideo = () => {
  */
 let removeRecommendMixedVideo = () => {
     Array.from(document.querySelectorAll("div.RichContent.is-collapsed > div.RichContent-cover > svg")).forEach((item) => {
-        console.log(item);
         item.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.remove();
     });
 }
