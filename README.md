@@ -8,10 +8,15 @@
   - 去除知乎令人不爽的内容。
     - 推荐页视频
     - 答案列表会员专享内容
+    - 推荐页带有视频的回答
 
 - [山东政务网增强](https://greasyfork.org/zh-CN/scripts/419801-%E5%B1%B1%E4%B8%9C%E6%94%BF%E5%8A%A1%E7%BD%91%E5%A2%9E%E5%BC%BA)
   - 一键搜索全部区县(目前只对济南有效
   - 回车搜索事项
+
+- 灯塔党建增强
+  - 自动连续播放视频
+  - 答题时请关掉该脚本  
 
 - [HPJAV Enhance](https://sleazyfork.org/zh-CN/scripts/425112-hpjav-enhance)
   - 18+
