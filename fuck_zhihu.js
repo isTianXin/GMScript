@@ -6,7 +6,7 @@
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
 // @match        https://www.zhihu.com
-// @run-at      document-end
+// @run-at       document-end
 // ==/UserScript==
 
 'use strict';
