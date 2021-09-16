@@ -76,7 +76,7 @@
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
 // @connect      www.ibiquta.com
-// @version      0.10.5
+// @version      0.11
 // @run-at       document-end
 // ==/UserScript==
 
@@ -101,6 +101,17 @@ const EXCEPTED_DOWNLOAD_SITES_KEY = "excepted_sites";
 // 无法获取 ready 事件的网站
 const SITES_WAIT_KEY_ELEMENT = {
     "www.yuzuhon.com": "#__layout > div > div.app-main > div > div.container > div.book-info-section",
+}
+
+// 使用 ajax 翻页 
+const SITES_CHANGE_BY_AJAX = {
+    "www.yousuu.com": (pathname) => {
+        if (!pathname) {
+            return false;
+        }
+        console.log(pathname);
+        return pathname.split("/")[1] === 'booklist';
+    }
 }
 /*======================================================================================================*/
 
@@ -1858,13 +1869,51 @@ let startWithInterval = (interval) => {
 let isSiteTriggerReadyEvent = (hostname) => {
     return !Object.keys(SITES_WAIT_KEY_ELEMENT).includes(hostname);
 }
+
+/**
+ * 当前站点是否使用 ajax 翻页
+ * @param {string} hostname 
+ * @param {string} path 
+ * @returns 
+ */
+let isSiteChangeByAjax = (hostname, pathname) => {
+    let site = SITES_CHANGE_BY_AJAX[hostname];
+    if (!site) {
+        return false;
+    }
+    console.log(site(pathname))
+    return site(pathname);
+}
+
+/**
+ * 页面 url 参数变化时回调
+ * @param {CallableFunction} callback 
+ */
+let callbackWhenUrlChange = (callback) => {
+    if (this.lastPathStr !== location.pathname
+        || this.lastQueryStr !== location.search
+        || this.lastHashStr !== location.hash
+    ) {
+        this.lastPathStr = location.pathname;
+        this.lastQueryStr = location.search;
+        this.lastHashStr = location.hash;
+        callback();
+    }
+}
 /*======================================================================================================*/
 /**
  * 入口
  */
+
+let intervalId = null;
 registerMenu();
+if (isSiteChangeByAjax(location.hostname, location.pathname)) {
+    intervalId = window.setInterval(callbackWhenUrlChange, 1000, () => startWithInterval(1000));
+    return;
+}
+window.clearInterval(intervalId);
 if (isSiteTriggerReadyEvent(location.hostname)) {
     startWithInterval(1000);
-} else {
-    waitForKeyElements(SITES_WAIT_KEY_ELEMENT[location.hostname], () => startWithInterval(1000));
+    return;
 }
+waitForKeyElements(SITES_WAIT_KEY_ELEMENT[location.hostname], () => startWithInterval(1000));
