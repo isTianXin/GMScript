@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fuck ZhiHu
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.2
+// @version      1.2.1
 // @description  去除知乎中的令人不爽的内容
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
@@ -50,14 +50,16 @@ let removeRecommendMixedVideo = () => {
 /**
  * 去除视频
  */
-let removeVideos = () => {
+let removeRecommendVideos = () => {
     removeRecommendVideo();
     removeRecommendMixedVideo();
     removeRecommendFrameVideo();
 }
 
 let start = () => {
-    removeVideos();
+    if (location.pathname == '/') {
+        removeRecommendVideos();
+    }
     removeVipContent();
 };
 
