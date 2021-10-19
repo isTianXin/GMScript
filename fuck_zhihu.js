@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fuck ZhiHu
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.3
+// @version      1.3.1
 // @description  去除知乎中的令人不爽的内容
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
@@ -78,7 +78,7 @@ let isQuestion = (title) => {
 /**
  * 去除标题为疑问句的文章（一般都是垃圾营销号）
  */
-let removeArticleQuestion = () => {
+let removeQuestionArticle = () => {
     Array.from(document.querySelectorAll("div.Feed > div.ContentItem.ArticleItem")).forEach((item) => {
         let title = item.querySelector("h2 > a > span")?.innerText;
         if (isQuestion(title)) {
@@ -94,7 +94,7 @@ let start = () => {
         removeRecommendVideos();
     }
     removeVipContent();
-    removeArticleQuestion();
+    removeQuestionArticle();
 };
 
 /**
