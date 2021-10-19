@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fuck ZhiHu
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.2.1
+// @version      1.3
 // @description  去除知乎中的令人不爽的内容
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
@@ -10,6 +10,17 @@
 // ==/UserScript==
 
 'use strict';
+
+const QuestionEndString = [
+    "?",
+    "？",
+    "什么",
+    "吗",
+];
+
+const QuestionString = [
+    "为什么",
+]
 
 /**
  * 去除答案列表会员专享
@@ -47,6 +58,7 @@ let removeRecommendMixedVideo = () => {
     });
 }
 
+
 /**
  * 去除视频
  */
@@ -56,11 +68,33 @@ let removeRecommendVideos = () => {
     removeRecommendFrameVideo();
 }
 
+let isQuestion = (title) => {
+    if (!title) {
+        return false;
+    }
+    return QuestionEndString.some(str => title.endsWith(str)) || QuestionString.some(str => title.includes(str));
+}
+
+/**
+ * 去除标题为疑问句的文章（一般都是垃圾营销号）
+ */
+let removeArticleQuestion = () => {
+    Array.from(document.querySelectorAll("div.Feed > div.ContentItem.ArticleItem")).forEach((item) => {
+        let title = item.querySelector("h2 > a > span")?.innerText;
+        if (isQuestion(title)) {
+            item.parentElement.parentElement.remove();
+        } else {
+            item.className = "ContentItem";
+        }
+    });
+}
+
 let start = () => {
     if (location.pathname == '/') {
         removeRecommendVideos();
     }
     removeVipContent();
+    removeArticleQuestion();
 };
 
 /**
