@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fuck ZhiHu
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.3.1
+// @version      1.3.2
 // @description  去除知乎中的令人不爽的内容
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
@@ -35,7 +35,7 @@ let removeVipContent = () => {
  * 去除推荐页视频
  */
 let removeRecommendVideo = () => {
-    Array.from(document.querySelectorAll("div.Feed > div.ContentItem.ZVideoItem")).forEach((item) => {
+    Array.from(document.querySelectorAll("div.Feed > div > div.ContentItem.ZVideoItem")).forEach((item) => {
         item.parentElement.parentElement.remove();
     });
 };
