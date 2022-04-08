@@ -4,8 +4,7 @@
 // @description  [知轩藏书/早安电子书/书荒网/柚子书]添加优书网评分和直链，[优书网/柚子书]书籍详情页添加[知轩藏书/早安电子书/龙凤互联/书荒网]下载链接
 // @require      https://greasyfork.org/scripts/40003-pajhome-md5-min/code/PajHome-MD5-min.js
 // @require      https://cdn.jsdelivr.net/npm/gbk.js@0.3.0/dist/gbk.min.js
-// @require      https://greasyfork.org/scripts/5392-waitforkeyelements/code/WaitForKeyElements.js
-// @author       tianxin
+// @require https://greasyfork.org/scripts/5392-waitforkeyelements/code/WaitForKeyElements.js
 // @match        *://zxcs.me/sort/*
 // @match        *://zxcs.me/post/*
 // @match        *://zxcs.me/index.php?keyword=*
@@ -52,6 +51,7 @@
 // @connect      www.yousuu.com
 // @connect      api.yousuu.com
 // @connect      www.zxcs.me
+// @connect      zxcs.me
 // @connect      www.zadzs.com
 // @connect      www.nordfxs.com
 // @connect      www.zvzee.com
@@ -75,8 +75,10 @@
 // @connect      www.kenshula.com
 // @connect      www.wucuo8.com
 // @connect      www.zxcs.info
+// @connect      zxcs.info
 // @connect      www.ibiquta.com
-// @version      0.11
+// @connect      www.mhtxs.la
+// @version      0.12
 // @run-at       document-end
 // ==/UserScript==
 
@@ -103,7 +105,7 @@ const SITES_WAIT_KEY_ELEMENT = {
     "www.yuzuhon.com": "#__layout > div > div.app-main > div > div.container > div.book-info-section",
 }
 
-// 使用 ajax 翻页 
+// 使用 ajax 翻页
 const SITES_CHANGE_BY_AJAX = {
     "www.yousuu.com": (pathname) => {
         if (!pathname) {
@@ -259,6 +261,20 @@ const rateSiteSourceConfig = {
  */
 const rateSiteTargetRoute = {
     'www.zxcs.me': () => {
+        let tag = location.pathname.split('/')[1];
+        let prefix = 'zxcs8.';
+        if (tag === 'post') {
+            return prefix + 'post';
+        }
+        if (['sort', 'tag', 'author'].includes(tag)) {
+            return prefix + 'sort';
+        }
+        // 搜索页面
+        if (location.pathname.includes('index.php')) {
+            return prefix + 'sort';
+        }
+    },
+    'zxcs.me': () => {
         let tag = location.pathname.split('/')[1];
         let prefix = 'zxcs8.';
         if (tag === 'post') {
@@ -758,7 +774,7 @@ const downloadSiteSourceConfig = {
     'zxcs8': {
         name: 'zxcs8',
         siteName: '知轩藏书',
-        host: 'http://www.zxcs.me',
+        host: 'http://zxcs.me',
         searchConfig(args) {
             return { url: this.host + '/index.php?keyword=' + args.bookName, method: "GET" };
         },
@@ -1305,7 +1321,7 @@ const downloadSiteSourceConfig = {
             return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         handler(options) {
-            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
         },
         parse(bookInfo, handler, response) {
             return parseRawDownloadResponse(bookInfo, handler, response);
@@ -1318,7 +1334,7 @@ const downloadSiteSourceConfig = {
     'zxcsinfo': {
         name: 'zxcsinfo',
         siteName: '知轩藏书(info)',
-        host: 'http://www.zxcs.info',
+        host: 'https://www.zxcs.info',
         searchConfig(args) {
             return { url: this.host + '/index.php?keyword=' + args.bookName, method: "GET" };
         },
@@ -1872,9 +1888,9 @@ let isSiteTriggerReadyEvent = (hostname) => {
 
 /**
  * 当前站点是否使用 ajax 翻页
- * @param {string} hostname 
- * @param {string} path 
- * @returns 
+ * @param {string} hostname
+ * @param {string} path
+ * @returns
  */
 let isSiteChangeByAjax = (hostname, pathname) => {
     let site = SITES_CHANGE_BY_AJAX[hostname];
@@ -1887,7 +1903,7 @@ let isSiteChangeByAjax = (hostname, pathname) => {
 
 /**
  * 页面 url 参数变化时回调
- * @param {CallableFunction} callback 
+ * @param {CallableFunction} callback
  */
 let callbackWhenUrlChange = (callback) => {
     if (this.lastPathStr !== location.pathname
