@@ -2005,13 +2005,23 @@ let callbackWhenYousuuExploreFeedLoad = (callback) => {
 }
 
 let ajaxSiteConfig = (hostname) => {
-    if (Object.keys(ajaxSiteTargetRoute).includes(hostname)) {
-        let site = ajaxSiteTargetRoute[hostname]();
-        if (!site) {
-            return null;
-        }
-        return ajaxSiteTargetConfig[site];
+    if (!Object.keys(ajaxSiteTargetRoute).includes(hostname)) {
+        return null;
     }
+    let site = ajaxSiteTargetRoute[hostname]();
+    if (!site) {
+        return null;
+    }
+    return ajaxSiteTargetConfig[site];
+}
+
+let startWhenAjax = () => {
+    let config = ajaxSiteConfig(location.hostname);
+    if (!config) {
+        return false;
+    }
+    window.setInterval(config.handler(), 1000, () => startWithInterval(1000));
+    return true;
 }
 
 /*======================================================================================================*/
@@ -2023,13 +2033,10 @@ let intervalId = null;
 registerMenu();
 
 //使用 ajax 翻页的网站
-let ajaxConfig = ajaxSiteConfig(location.hostname);
-if (ajaxConfig) {
-    intervalId = window.setInterval(ajaxConfig.handler(), 1000, () => startWithInterval(1000));
+if (startWhenAjax()) {
     return;
 }
 
-window.clearInterval(intervalId);
 if (isSiteTriggerReadyEvent(location.hostname)) {
     startWithInterval(1000);
     return;
