@@ -791,7 +791,7 @@ const rateSiteTargetConfig = {
             this._utils.dataV = dataV.shift();
         },
         bookName(item) {
-            return item.querySelector('div.author-info > div.book-name-and-score.space-praiseCom-BookTitleScore-margin > a').innerText;
+            return item.getAttribute('booktitle') ?? item.querySelector('div.author-info > div.book-name-and-score.space-praiseCom-BookTitleScore-margin > a').innerText;
         },
         bookAuthor(item) {
             //explore 页面没有作者信息
@@ -810,7 +810,7 @@ const rateSiteTargetConfig = {
         anchorPos: "beforebegin",
         handler(options, callback) {
             this.prepare();
-            let bookList = Array.from(document.querySelectorAll(`div.left > div:nth-child(2) > div.comment-card.BookCommentItem:not(.${this._checkedClassName})`));
+            let bookList = Array.from(document.querySelectorAll(`div.comment-card.BookCommentItem:not(.${this._checkedClassName})`));
             bookList.forEach((item) => {
                 //无限滚动 Feed 流，加个标签区分一下
                 item.classList.add(this._checkedClassName);
@@ -1997,7 +1997,7 @@ let callbackWhenUrlChange = (callback) => {
  * @param {CallableFunction} callback
  */
 let callbackWhenYousuuExploreFeedLoad = (callback) => {
-    let bookId = document.querySelector("#app > div.app-main > section > div > div.left > div >div:nth-last-child(2)").getAttribute("bookid");
+    let bookId = document.querySelector('#app > div.app-main > section > div > div.left > div:not([style*="display:none"]):not([style*="display: none"]) >div:nth-last-child(2)').getAttribute("bookid");
     if (this.lastYousuuExploreFeedBookId !== bookId) {
         this.lastYousuuExploreFeedBookId = bookId;
         callback();
