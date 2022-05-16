@@ -15,6 +15,7 @@
 // @match        *://www.zxcs.me/index.php?keyword=*
 // @match        *://www.yousuu.com/book/*
 // @match        *://www.yousuu.com/booklist/*
+// @match        *://www.yousuu.com/explore*
 // @match        *://www.zadzs.com/txt/*
 // @match        *://www.zadzs.com/plus/search.php?*
 // @match        *://www.nordfxs.com/*
@@ -78,7 +79,7 @@
 // @connect      zxcs.info
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
-// @version      0.12
+// @version      0.13
 // @run-at       document-end
 // ==/UserScript==
 
@@ -105,16 +106,6 @@ const SITES_WAIT_KEY_ELEMENT = {
     "www.yuzuhon.com": "#__layout > div > div.app-main > div > div.container > div.book-info-section",
 }
 
-// 使用 ajax 翻页
-const SITES_CHANGE_BY_AJAX = {
-    "www.yousuu.com": (pathname) => {
-        if (!pathname) {
-            return false;
-        }
-        console.log(pathname);
-        return pathname.split("/")[1] === 'booklist';
-    }
-}
 /*======================================================================================================*/
 
 /*================================================  类  ================================================*/
@@ -242,7 +233,7 @@ const rateSiteSourceConfig = {
                 if (i >= bookInfo.maxNum) {
                     break;
                 }
-                if (item.author == bookInfo.bookAuthor && item.title == bookInfo.bookName) {
+                if (item.bookId === bookInfo.bookId || (item.author == bookInfo.bookAuthor && item.title == bookInfo.bookName)) {
                     rateInfo.score = Number.parseFloat(item.score / 10).toFixed(1);
                     rateInfo.num = Math.round(Number.parseFloat(item.scorerCount));
                     rateInfo.url = this.prefix + item.bookId;
@@ -353,10 +344,10 @@ const rateSiteTargetRoute = {
     },
     'www.zxcs.info': () => {
         let tag = location.pathname.split('/')[1];
-        let prefix = 'zxcs8.';
         if (tag === 'post') {
-            return prefix + 'post';
+            return 'zxcsinfo.post';
         }
+        let prefix = 'zxcs8.';
         if (['sort', 'tag', 'author'].includes(tag)) {
             return prefix + 'sort';
         }
@@ -368,8 +359,12 @@ const rateSiteTargetRoute = {
     'www.yousuu.com': () => {
         let tag = location.pathname.split('/')[1];
         let prefix = 'yousuu.';
-        if (tag === 'booklist') {
-            return prefix + 'booklist';
+        switch (tag) {
+            case 'booklist':
+            case 'explore':
+                return prefix + tag;
+            default:
+                break;
         }
     },
 };
@@ -422,6 +417,26 @@ const rateSiteTargetConfig = {
             bookList.forEach((item) => {
                 callback({ site: this.name, item: item, ...options });
             });
+        },
+    },
+    'zxcsinfo.post': {
+        name: 'zxcsinfo.post',
+        bookName(item) {
+            return item.querySelector('h1').innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.querySelector("div.book-info > p.intro").innerText.split("著")[0].trim();
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<p class="intro" style="font-size:14px">评分：<a target = "_blank" href="${bookLink}">${rate}</a> 人数：${rateNum}</p>`;
+        },
+        anchorObj(item) {
+            return item.querySelector('div.book-info > p.intro');
+        },
+        anchorPos: 'afterend',
+        handler(options, callback) {
+            callback({ site: this.name, item: document, ...options });
         },
     },
     'zadzs.detail': {
@@ -761,6 +776,44 @@ const rateSiteTargetConfig = {
             this.prepare();
             let bookList = Array.from(document.querySelectorAll('div.common-card-layout.booklist-book-item'));
             bookList.forEach((item) => {
+                callback({ site: this.name, item: item, ...options });
+            });
+        },
+    },
+    'yousuu.explore': {
+        name: 'yousuu.explpre',
+        _utils: {},
+        _checkedClassName: 'gmRateChecked',
+        prepare() {
+            //获取dataV的值
+            let node = document.querySelector('div.comment-content.comment');
+            let dataV = node.innerHTML.match(/data-v-(\w+)/g);
+            this._utils.dataV = dataV.shift();
+        },
+        bookName(item) {
+            return item.querySelector('div.author-info > div.book-name-and-score.space-praiseCom-BookTitleScore-margin > a').innerText;
+        },
+        bookAuthor(item) {
+            //explore 页面没有作者信息
+            return null;
+        },
+        bookId(item) {
+            return parseInt(item.getAttribute('bookid'));
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<div ${this._utils.dataV}="" class="comment-content-inner default" style="color:grey">评分：${rate}&nbsp;&nbsp;&nbsp;&nbsp;人数：${rateNum}</div>`
+        },
+        anchorObj(item) {
+            return item.querySelector('div.comment-content-inner.default');
+        },
+        anchorPos: "beforebegin",
+        handler(options, callback) {
+            this.prepare();
+            let bookList = Array.from(document.querySelectorAll(`div.left > div:nth-child(2) > div.comment-card.BookCommentItem:not(.${this._checkedClassName})`));
+            bookList.forEach((item) => {
+                //无限滚动 Feed 流，加个标签区分一下
+                item.classList.add(this._checkedClassName);
                 callback({ site: this.name, item: item, ...options });
             });
         },
@@ -1352,11 +1405,10 @@ const downloadSiteSourceConfig = {
             return this.host + url.replace(location.origin, '').replace(this.host, '');
         },
         downloadLink(item) {
-            let url = item.querySelector('.down_2>a').href;
-            return this.host + url.replace(location.origin, '').replace(this.host, '');
+            return this.bookLink(item);
         },
         handler(options) {
-            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
         },
         parse(bookInfo, handler, response) {
             return parseRawDownloadResponse(bookInfo, handler, response);
@@ -1367,70 +1419,6 @@ const downloadSiteSourceConfig = {
         },
     },
 };
-
-/**
- * 其他链接来源的相关配置
- */
-const linkSiteSourceConfig = {
-    'baike': {
-        name: 'baike',
-        siteName: '百度百科',
-        link(info) {
-            return 'https://baike.baidu.com/search?word=' + info.bookName;
-        },
-    }
-}
-
-/**
- * 需要添加其他链接的网站路由
- * 转换为 downloadSiteTargetConfig 的键名
- */
-const linkSiteTargetRoute = {
-    'www.yousuu.com': {
-        isValid: () => location.pathname.split('/')[1] === 'book',
-        targetConfig: () => 'yousuu'
-    },
-};
-
-/**
- * 需要添加其他链接的网站配置
- */
-const linkSiteTargetConfig = {
-    'yousuu': {
-        name: 'yousuu',
-        siteName: '优书网',
-        _utils: {},
-        //预处理
-        prepare() {
-            //获取dataV的值
-            let node = Array.from(document.querySelectorAll('div.common-card-layout.main-left-header')).pop();
-            let dataV = node.outerHTML.match(/data-v-(\w+)/g);
-            this._utils.dataV = dataV;
-            //插入下载容器
-            let content = '<div ' + dataV[0] + '="" class="common-card-layout main-left-header" id="gm-insert-link-box" style="display: none">'
-                + '<div ' + dataV[1] + '="" ' + dataV[2] + '="" class="tabs" id="gm-insert-link-content"></div></div>';
-            document.querySelector('div.common-card-layout.main-left-header').insertAdjacentHTML('beforebegin', content);
-        },
-        bookName() {
-            return document.querySelector('div.book-info-wrap>div.book-info-detail>h1.book-name').innerText;
-        },
-        bookAuthor() {
-            return document.querySelector('div.book-info-wrap>div.book-info-detail>p.book-author>a').innerText;
-        },
-        //获取下载链接后的处理
-        task(info) {
-            let obj = document.querySelector('#gm-insert-link-content');
-            let item = '';
-            //如果第一次插入,则显示父容器，同时插入标识
-            if (obj.parentElement.style.display === 'none') {
-                obj.parentElement.setAttribute('style', 'display:run-in');
-                item = '<label ' + this._utils.dataV[3] + '="" class="tab current">链接</label>';
-            }
-            item += '<label ' + this._utils.dataV[3] + '="" class="tab"><a href="' + info.link + '" target="_blank">' + info.siteName + '</a></label>';
-            obj.insertAdjacentHTML('beforeend', item);
-        },
-    },
-}
 
 /**
  * 需要添加下载链接的网站路由
@@ -1539,6 +1527,96 @@ const downloadSiteTargetConfig = {
     }
 }
 
+/**
+ * 其他链接来源的相关配置
+ */
+const linkSiteSourceConfig = {
+    'baike': {
+        name: 'baike',
+        siteName: '百度百科',
+        link(info) {
+            return 'https://baike.baidu.com/search?word=' + info.bookName;
+        },
+    }
+}
+
+/**
+ * 需要添加其他链接的网站路由
+ * 转换为 downloadSiteTargetConfig 的键名
+ */
+const linkSiteTargetRoute = {
+    'www.yousuu.com': {
+        isValid: () => location.pathname.split('/')[1] === 'book',
+        targetConfig: () => 'yousuu'
+    },
+};
+
+/**
+ * 需要添加其他链接的网站配置
+ */
+const linkSiteTargetConfig = {
+    'yousuu': {
+        name: 'yousuu',
+        siteName: '优书网',
+        _utils: {},
+        //预处理
+        prepare() {
+            //获取dataV的值
+            let node = Array.from(document.querySelectorAll('div.common-card-layout.main-left-header')).pop();
+            let dataV = node.outerHTML.match(/data-v-(\w+)/g);
+            this._utils.dataV = dataV;
+            //插入下载容器
+            let content = '<div ' + dataV[0] + '="" class="common-card-layout main-left-header" id="gm-insert-link-box" style="display: none">'
+                + '<div ' + dataV[1] + '="" ' + dataV[2] + '="" class="tabs" id="gm-insert-link-content"></div></div>';
+            document.querySelector('div.common-card-layout.main-left-header').insertAdjacentHTML('beforebegin', content);
+        },
+        bookName() {
+            return document.querySelector('div.book-info-wrap>div.book-info-detail>h1.book-name').innerText;
+        },
+        bookAuthor() {
+            return document.querySelector('div.book-info-wrap>div.book-info-detail>p.book-author>a').innerText;
+        },
+        //获取下载链接后的处理
+        task(info) {
+            let obj = document.querySelector('#gm-insert-link-content');
+            let item = '';
+            //如果第一次插入,则显示父容器，同时插入标识
+            if (obj.parentElement.style.display === 'none') {
+                obj.parentElement.setAttribute('style', 'display:run-in');
+                item = '<label ' + this._utils.dataV[3] + '="" class="tab current">链接</label>';
+            }
+            item += '<label ' + this._utils.dataV[3] + '="" class="tab"><a href="' + info.link + '" target="_blank">' + info.siteName + '</a></label>';
+            obj.insertAdjacentHTML('beforeend', item);
+        },
+    },
+}
+
+/**
+ * 使用 ajax 翻页网站配置
+ */
+const ajaxSiteTargetRoute = {
+    'www.yousuu.com': () => {
+        let prefix = 'yousuu.';
+        let pathnames = location.pathname.split('/');
+        switch (pathnames[1]) {
+            case 'booklist':
+            case 'explore':
+                return `${prefix}${pathnames[1]}`
+            default:
+                return null;
+        }
+    },
+}
+const ajaxSiteTargetConfig = {
+    'yousuu.booklist': {
+        name: 'yousuu.booklist',
+        handler: () => { return callbackWhenUrlChange },
+    },
+    'yousuu.explore': {
+        name: 'yousuu.explore',
+        handler: () => { return callbackWhenYousuuExploreFeedLoad },
+    }
+}
 /*======================================================================================================*/
 
 /*===============================================  方法  ================================================*/
@@ -1595,7 +1673,13 @@ let fetch = async (options) => {
  * @param bookInfo {bookName:'',bookAuthor:''}
  */
 let getRateInfo = async (handler, bookInfo) => {
-    let cacheKey = 'GET:RATE:' + handler.name.toUpperCase() + ':NAME:' + bookInfo.bookName + ':AUTHOR:' + bookInfo.bookAuthor;
+    let cacheKeyPrefix = `GET:RATE:${handler.name.toUpperCase()}`;
+    let cacheKey = null;
+    if (bookInfo.bookId) {
+        cacheKey = `${cacheKeyPrefix}:ID:${bookInfo.bookId}`;
+    } else {
+        cacheKey = `${cacheKeyPrefix}:NAME:${bookInfo.bookName}:AUTHOR:${bookInfo.bookAuthor}`;
+    }
     //查询缓存
     let cacheValue = storage.getValue(cacheKey, SEARCH_EXPIRED_TIME);
     if (cacheValue !== null) {
@@ -1614,7 +1698,13 @@ let getRateInfo = async (handler, bookInfo) => {
 let insertRate = async (options) => {
     let siteConfig = rateSiteTargetConfig[options.site];
     let args = { bookName: siteConfig.bookName(options.item), bookAuthor: siteConfig.bookAuthor(options.item), maxNum: siteConfig.maxNum };
-
+    //判断是否可以获取到 bookId
+    if (siteConfig.hasOwnProperty('bookId')) {
+        let bookId = siteConfig.bookId(options.item);
+        if (bookId) {
+            args.bookId = bookId;
+        }
+    }
     let data = await getRateInfo(rateSiteSourceConfig[options.rateSourceSite], args);
     if (data.match) {
         siteConfig.anchorObj(options.item).insertAdjacentHTML(siteConfig.anchorPos, siteConfig.rateItem(data.score, data.num, data.url));
@@ -1887,21 +1977,6 @@ let isSiteTriggerReadyEvent = (hostname) => {
 }
 
 /**
- * 当前站点是否使用 ajax 翻页
- * @param {string} hostname
- * @param {string} path
- * @returns
- */
-let isSiteChangeByAjax = (hostname, pathname) => {
-    let site = SITES_CHANGE_BY_AJAX[hostname];
-    if (!site) {
-        return false;
-    }
-    console.log(site(pathname))
-    return site(pathname);
-}
-
-/**
  * 页面 url 参数变化时回调
  * @param {CallableFunction} callback
  */
@@ -1916,6 +1991,29 @@ let callbackWhenUrlChange = (callback) => {
         callback();
     }
 }
+
+/**
+ * 优书网发现页面最后一个 bookId 变化时回调
+ * @param {CallableFunction} callback
+ */
+let callbackWhenYousuuExploreFeedLoad = (callback) => {
+    let bookId = document.querySelector("#app > div.app-main > section > div > div.left > div >div:nth-last-child(2)").getAttribute("bookid");
+    if (this.lastYousuuExploreFeedBookId !== bookId) {
+        this.lastYousuuExploreFeedBookId = bookId;
+        callback();
+    }
+}
+
+let ajaxSiteConfig = (hostname) => {
+    if (Object.keys(ajaxSiteTargetRoute).includes(hostname)) {
+        let site = ajaxSiteTargetRoute[hostname]();
+        if (!site) {
+            return null;
+        }
+        return ajaxSiteTargetConfig[site];
+    }
+}
+
 /*======================================================================================================*/
 /**
  * 入口
@@ -1923,10 +2021,14 @@ let callbackWhenUrlChange = (callback) => {
 
 let intervalId = null;
 registerMenu();
-if (isSiteChangeByAjax(location.hostname, location.pathname)) {
-    intervalId = window.setInterval(callbackWhenUrlChange, 1000, () => startWithInterval(1000));
+
+//使用 ajax 翻页的网站
+let ajaxConfig = ajaxSiteConfig(location.hostname);
+if (ajaxConfig) {
+    intervalId = window.setInterval(ajaxConfig.handler(), 1000, () => startWithInterval(1000));
     return;
 }
+
 window.clearInterval(intervalId);
 if (isSiteTriggerReadyEvent(location.hostname)) {
     startWithInterval(1000);
