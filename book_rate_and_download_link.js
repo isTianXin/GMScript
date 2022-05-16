@@ -79,7 +79,7 @@
 // @connect      zxcs.info
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
-// @version      0.13
+// @version      0.13.1
 // @run-at       document-end
 // ==/UserScript==
 
@@ -791,7 +791,7 @@ const rateSiteTargetConfig = {
             this._utils.dataV = dataV.shift();
         },
         bookName(item) {
-            return item.getAttribute('booktitle') ?? item.querySelector('div.author-info > div.book-name-and-score.space-praiseCom-BookTitleScore-margin > a').innerText;
+            return item.getAttribute('booktitle') || item.querySelector('div.author-info > div.book-name-and-score.space-praiseCom-BookTitleScore-margin > a').innerText;
         },
         bookAuthor(item) {
             //explore 页面没有作者信息
