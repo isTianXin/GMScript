@@ -2029,7 +2029,6 @@ let startWhenAjax = () => {
  * 入口
  */
 
-let intervalId = null;
 registerMenu();
 
 //使用 ajax 翻页的网站
