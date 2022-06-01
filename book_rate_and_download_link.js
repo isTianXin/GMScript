@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @description  [知轩藏书/早安电子书/书荒网/柚子书]添加优书网评分和直链，[优书网/柚子书]书籍详情页添加[知轩藏书/早安电子书/龙凤互联/书荒网]下载链接
 // @require      https://greasyfork.org/scripts/40003-pajhome-md5-min/code/PajHome-MD5-min.js
-// @require      https://cdn.jsdelivr.net/npm/gbk.js@0.3.0/dist/gbk.min.js
+// @require      https://unpkg.com/gbk.js@0.3.0/dist/gbk.min.js
 // @require https://greasyfork.org/scripts/5392-waitforkeyelements/code/WaitForKeyElements.js
 // @match        *://zxcs.me/sort/*
 // @match        *://zxcs.me/post/*
@@ -79,7 +79,7 @@
 // @connect      zxcs.info
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
-// @version      0.13.1
+// @version      0.13.2
 // @run-at       document-end
 // ==/UserScript==
 
