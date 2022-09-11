@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Fuck ZhiHu
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.3.2
+// @version      1.3.3
 // @description  去除知乎中的令人不爽的内容
 // @author       sancunguangyin
 // @match        https://www.zhihu.com/question/*
@@ -58,6 +58,14 @@ let removeRecommendMixedVideo = () => {
     });
 }
 
+/**
+ * 去除推荐视频
+ */
+let removeRecommendEduSectionVideo = () => {
+    Array.from(document.querySelectorAll("div.EduSectionItem-video")).forEach((item) => {
+        item.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.remove();
+    });
+}
 
 /**
  * 去除视频
@@ -66,6 +74,7 @@ let removeRecommendVideos = () => {
     removeRecommendVideo();
     removeRecommendMixedVideo();
     removeRecommendFrameVideo();
+    removeRecommendEduSectionVideo();
 }
 
 let isQuestion = (title) => {
