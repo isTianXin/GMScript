@@ -44,6 +44,7 @@
 // @match        *://www.zxcs.info/author/*
 // @match        *://www.zxcs.info/tag/*
 // @match        *://www.zxcs.info/index.php?keyword=*
+// @match        *://zxcstxt.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @grant        GM_getValue
@@ -79,7 +80,8 @@
 // @connect      zxcs.info
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
-// @version      0.13.3
+// @connect      zxcstxt.com
+// @version      0.14
 // @run-at       document-end
 // ==/UserScript==
 
@@ -94,6 +96,9 @@ const MAX_SEARCH_NUM = 5;
 const DOWNLOAD_TYPE_DIRECT = 1;
 const DOWNLOAD_TYPE_FETCH = 2;
 const DOWNLOAD_TYPE_PROCESS = 3;
+
+const IS_DEBUG = false;
+
 
 //扩展名
 const SCRIPT_HANDLER_TAMPERMONKEY = 'tampermonkey';
@@ -278,6 +283,14 @@ const rateSiteTargetRoute = {
         if (location.pathname.includes('index.php')) {
             return prefix + 'sort';
         }
+    },
+    'zxcstxt.com': () => {
+        let tag = location.pathname.split('/')[1];
+        let prefix = 'zxcstxt.';
+        if (/^(\d)+$/.test(tag)) {
+            return prefix + 'post';
+        }
+        return prefix + 'sort';
     },
     'www.zadzs.com': () => {
         let pathname = location.pathname;
@@ -817,7 +830,51 @@ const rateSiteTargetConfig = {
                 callback({ site: this.name, item: item, ...options });
             });
         },
-    }
+    },
+    'zxcstxt.post': {
+        name: 'zxcstxt.post',
+        bookName(item) {
+            return item.querySelector('h1').innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.querySelector('h1').innerText.match('[:：](.+)')[1].trim();
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<p style="font-weight:bold">【评分】:<br><a href="${bookLink}" target="_blank">优书网: ${rate}</a>&nbsp;&nbsp;人数: ${rateNum}</p>`;
+        },
+        anchorObj(item) {
+            return item.querySelector('div.theme-box.wp-posts-content > p');
+        },
+        anchorPos: 'afterend',
+        handler(options, callback) {
+            callback({ site: this.name, item: document, ...options });
+        },
+    },
+    'zxcstxt.sort': {
+        name: 'zxcstxt.sort',
+        bookName(item) {
+            return item.firstElementChild.innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.firstElementChild.innerText.match('[:：](.+)')[1].trim();
+        },
+        maxNum: MAX_SEARCH_NUM,
+        rateItem(rate, rateNum, bookLink) {
+            return `<div class="item-tags scroll-x no-scrollbar mb6">
+            <a class="but c-blue" href="${bookLink}" target="_blank"><i class="fa fa-book" aria-hidden="true"></i>评分: ${rate}&nbsp;&nbsp;人数: ${rateNum}</a></div>`;
+        },
+        anchorObj(item) {
+            return item.querySelector('.item-meta');
+        },
+        anchorPos: 'beforebegin',
+        handler(options, callback) {
+            let bookList = Array.from(document.querySelectorAll('.posts-item'));
+            bookList.forEach((item) => {
+                callback({ site: this.name, item: item, ...options });
+            });
+        },
+    },
 };
 
 /**
@@ -1418,6 +1475,37 @@ const downloadSiteSourceConfig = {
             return { url: options.url, method: 'GET' };
         },
     },
+    'zxcstxt': {
+        name: 'zxcstxt',
+        siteName: '知轩藏书(txt)',
+        host: 'https://zxcstxt.com',
+        searchConfig(args) {
+            return { url: this.host + '/?s=' + args.bookName + '&type=post', method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll('.posts-item'));
+        },
+        bookName(item) {
+            return item.children["0"].innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
+        },
+        bookLink(item) {
+            let url = item.children["0"].getElementsByTagName('a')[0].href;
+            let bookId = parseInt(url.split("/").pop());
+            return `${this.host}/download?post=${bookId}`
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+    },
 };
 
 /**
@@ -1634,6 +1722,7 @@ let arrayDiff = (firstArray, secondArray) => {
     return [...firstArray].filter(item => !set.has(item));
 }
 
+let log = (...data) => IS_DEBUG && console.log(data);
 /*=====================================================================================================*/
 
 
@@ -1686,6 +1775,7 @@ let getRateInfo = async (handler, bookInfo) => {
         return cacheValue;
     }
     let response = await fetch(handler.request(bookInfo));
+    log(response,response?.responseText);
     let data = handler.parse(bookInfo, response);
     storage.setValue(cacheKey, data);
     return data;
@@ -1788,6 +1878,7 @@ let getDownLoadLink = async (options) => {
             return { downloadLink: cacheValue, siteName: siteConfig.siteName };
         }
         let response = await fetch(siteConfig.fetchConfig({ url: options.bookLink }));
+        log(response,response?.responseText);
         let html = new DOMParser().parseFromString(response.responseText, "text/html");
         let downloadLink = siteConfig.downloadLink(html);
         storage.setValue(cacheKey, downloadLink);
@@ -1804,10 +1895,12 @@ let getDownLoadLink = async (options) => {
  */
 let parseRawDownloadResponse = (bookInfo, handler, response) => {
     let html = new DOMParser().parseFromString(response.responseText, "text/html");
+    log(html);
     let bookList = handler.bookList(html);
     let bookLink = '';
     let bookItem = '';
     let match = bookList.some((item) => {
+        IS_DEBUG && log(handler.bookName(item).trim(),bookInfo.bookName.trim(),handler.bookAuthor(item).trim(),bookInfo.bookAuthor.trim());
         if (handler.bookName(item).trim() === bookInfo.bookName.trim() && handler.bookAuthor(item).trim() === bookInfo.bookAuthor.trim()) {
             bookItem = item;
             bookLink = handler.bookLink(item);
@@ -1833,6 +1926,7 @@ let getDownloadInfo = async (handler, bookInfo) => {
     }
 
     let response = await fetch(handler.searchConfig({ bookName: bookInfo.bookName }));
+    log(response?.responseText);
     let [data, cache] = handler.parse(bookInfo, handler, response);
     //判断是否应该添加缓存
     if (!handler.hasOwnProperty('shouldCacheBookLink') || handler.shouldCacheBookLink({ item: data.bookItem })) {
