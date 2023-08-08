@@ -110,8 +110,6 @@ function nextVideo(query) {
     log('CACHE:', key, cachedData);
     if (cachedData) {
         nextVideoConfig = cachedData;
-    } else {
-        nextVideoConfig = {};
     }
     // 判断缓存的数据是否获取过下标
     if (nextVideoConfig.checked) {
