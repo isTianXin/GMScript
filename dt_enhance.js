@@ -19,14 +19,24 @@ const STUDY_STATUS_INIT = 1;
 const STUDY_STATUS_FINISHED = 2;
 
 /**
+ * 视频学习状态文字
+ */
+const STUDY_STATUS_TEXT_UNFINISHED = "未学习";
+const STUDY_STATUS_TEXT_FINISHED = "已学习";
+const STUDY_STATUS_TEXT_ONGOING = "学习中";
+const STUDY_STATUS_TEXT_EXAM_NOT_PASS = "未通过考试";
+
+/**
  * 脚本运行时间(24小时制 0 ~ 23)
  */
 const HOUR_START = 8;
 const HOUR_END = 23;
 
-const DEBUG = false;
+const DEBUG = true;
 /**
  * 下一个视频
+ * checked 是否获取下一个视频下标
+ * paged 是否已翻页
  */
 let nextVideoConfig = {
     videoIndex: null,
@@ -35,7 +45,7 @@ let nextVideoConfig = {
     pageNum: 1,
 };
 
-function log(...args){
+function log(...args) {
     DEBUG && console.log(args);
 }
 
@@ -53,6 +63,22 @@ function getChildIndex(node) {
  */
 function playingVideo() {
     return document.querySelector('div.suspended');
+}
+/**
+ * 正在播放的视频所在的完整卡片
+ * @returns 
+ */
+function playingVideoCard(playing) {
+
+    return (playing ?? playingVideo()).parentElement.parentElement;
+}
+/**
+ * 正在播放的视频学习状态文字
+ * @param {*} playingVideoCard 
+ * @returns 
+ */
+function playingVideoStudyStateText(playingVideo) {
+    return (playingVideo ?? playingVideoCard())?.querySelector("span.state-paused")?.innerText;
 }
 /**
  * 播放列表翻页button
@@ -77,12 +103,17 @@ function getNextFromFirst() {
  * @returns 
  */
 function nextVideo(query) {
+
+    // 取缓存
     let key = getNextVideoCacheKey(query);
     let cachedData = GM_getValue(key);
     log('CACHE:', key, cachedData);
     if (cachedData) {
         nextVideoConfig = cachedData;
+    } else {
+        nextVideoConfig = {};
     }
+    // 判断缓存的数据是否获取过下标
     if (nextVideoConfig.checked) {
         return nextVideoConfig;
     }
@@ -90,6 +121,8 @@ function nextVideo(query) {
 
     if (playing) {
         let next = getNextFromSibling(playing);
+
+        //有下一个，说明不是本页最后一个，直接返回
         if (next) {
             nextVideoConfig.videoIndex = getChildIndex(next);
             nextVideoConfig.checked = true;
@@ -97,7 +130,8 @@ function nextVideo(query) {
             GM_setValue(key, nextVideoConfig);
             log(key, nextVideoConfig);
             return nextVideoConfig;
-        } //翻页
+        }
+        //如果已经翻过页，依然没有下一个，说明已经看完了
         if (nextVideoConfig.paged) {
             return null;
         }
@@ -118,10 +152,13 @@ function nextVideo(query) {
         return null;
 
     } else {
+
+        //没有播放，并且没有翻页，异常情况
         if (!nextVideoConfig.paged) {
             log('Unkonwn playing video');
             return null;
         }
+        //从本页第一个开始
         // let next = getNextFromFirst();
         nextVideoConfig.videoIndex = 0;
         nextVideoConfig.checked = true;
@@ -207,10 +244,14 @@ function isCurrentVideoFinish(query) {
  * @param {URLSearchParams} query 
  * @returns 
  */
-function hasCurrentVideoFinished(query) {
+function hasCurrentVideoFinished(query, playing) {
     let value = GM_getValue(getFinishedCacheKey(query));
     log('Finished:' + value);
-    return value !== undefined && value !== null;
+    if (value !== undefined && value !== null) {
+        return true;
+    }
+    log('State:' + playingVideoStudyStateText());
+    return playingVideoStudyStateText() === STUDY_STATUS_TEXT_FINISHED;
 }
 /**
  * 是否有随堂测试
@@ -280,6 +321,7 @@ function orderPlay(query) {
     //提前获取下一个视频
     let next = nextVideo(query);
     log('n', next);
+
     //已经播放过或者正好播放完成,跳到下一个
     if (hasCurrentVideoStudied(query) || isCurrentVideoFinish(query)) {
         jumpToNext(query);
