@@ -52,10 +52,6 @@ function log(...args) {
     DEBUG && console.log(args);
 }
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 /**
  * 获取子节点为父节点的第几个元素
  * @param node
