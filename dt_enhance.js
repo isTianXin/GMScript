@@ -58,6 +58,11 @@ let nextVideoConfig = {
     shouldDelayClickNextVideo: false,
 };
 
+/**
+ * url 参数
+ */
+let query = null;
+
 function log(...args) {
     DEBUG && console.log(args);
 }
@@ -124,10 +129,10 @@ function setFirstVideoInPageAsNextVideo(key) {
  * 下一个视频
  * @returns
  */
-function nextVideo(query) {
+function nextVideo() {
 
     // 取缓存
-    let key = getNextVideoCacheKey(query);
+    let key = getNextVideoCacheKey();
     let cachedData = GM_getValue(key);
     log('CACHE:', key, cachedData);
     if (cachedData) {
@@ -197,8 +202,8 @@ function nextVideo(query) {
  * 跳转到下一个视频
  * @returns
  */
-function jumpToNext(query) {
-    let next = nextVideo(query);
+function jumpToNext() {
+    let next = nextVideo();
     log('nextVideo', next);
 
     //播放下一个
@@ -213,7 +218,7 @@ function jumpToNext(query) {
     if (next.shouldDelayClickNextVideo) {
         next.shouldDelayClickNextVideo = false;
         //写入缓存与 nextVideo 函数配合
-        GM_setValue(getNextVideoCacheKey(query), next);
+        GM_setValue(getNextVideoCacheKey(), next);
         return;
     }
     //点击下一个频频
@@ -226,7 +231,7 @@ function jumpToNext(query) {
 function getQuery() {
     return new URLSearchParams(location.hash?.split('?')[1])
 }
-function getFinishedCacheKey(query) {
+function getFinishedCacheKey() {
     if (!query) {
         return null;
     }
@@ -234,13 +239,13 @@ function getFinishedCacheKey(query) {
     let courceListId = query.get('courseListId');
     return 'CID:' + courseId + ':CLID:' + courceListId;
 }
-function getExamCacheKey(query) {
+function getExamCacheKey() {
     if (!query) {
         return null;
     }
     return 'EXAM:CID:' + query.get('courseId');
 }
-function getNextVideoCacheKey(query) {
+function getNextVideoCacheKey() {
     if (!query) {
         return null;
     }
@@ -250,33 +255,39 @@ function getNextVideoCacheKey(query) {
  * 当前视频播放是否完毕
  * @returns
  */
-function isCurrentVideoFinish(query) {
+function isCurrentVideoFinish() {
     //是否出现重播按钮
     let replayButton = document.querySelector("div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused.vjs-ended");
     //播放完成标识
     if (replayButton !== null) {
-        GM_setValue(getFinishedCacheKey(query), 1);
+        GM_setValue(getFinishedCacheKey(), 1);
     }
     return replayButton !== null;
 }
 /**
+ * 根据播放列表视频状态文字判断是否已经播放完成
+ * @returns 
+ */
+function isVideoFinishedAccordingToStudyStatusText() {
+    log('State:' + playingVideoStudyStateText());
+    if ([STUDY_STATUS_TEXT_FINISHED, STUDY_STATUS_TEXT_EXAM_NOT_PASS].includes(playingVideoStudyStateText())) {
+        //翻页后 playing 获取不到，因此写入缓存使其在上一步就返回
+        GM_setValue(getFinishedCacheKey(), 1);
+        return true;
+    }
+    return false;
+}
+/**
  * 当前视频是否学习过
- * @param {URLSearchParams} query
  * @returns
  */
-function hasCurrentVideoFinished(query, playing) {
-    let value = GM_getValue(getFinishedCacheKey(query));
+function hasCurrentVideoFinished(playing) {
+    let value = GM_getValue(getFinishedCacheKey());
     log('Finished:' + value);
     if (value !== undefined && value !== null) {
         return true;
     }
-    log('State:' + playingVideoStudyStateText());
-    if ([STUDY_STATUS_TEXT_FINISHED, STUDY_STATUS_TEXT_EXAM_NOT_PASS].includes(playingVideoStudyStateText())) {
-        //翻页后 playing 获取不到，因此写入缓存使其在上一步就返回
-        GM_setValue(getFinishedCacheKey(query), 1);
-        return true;
-    }
-    return false;
+    return isVideoFinishedAccordingToStudyStatusText();
 }
 /**
  * 是否有随堂测试
@@ -293,7 +304,7 @@ function hasExam() {
  * 是否在考试页面
  * @returns
  */
-function inExam(query) {
+function inExam() {
     if (!query) {
         return false;
     }
@@ -301,12 +312,11 @@ function inExam(query) {
 }
 /**
  * 退出考试
- * @param {} query
  */
-function exitExam(query) {
+function exitExam() {
     if (query.get('studyStatus') == STUDY_STATUS_FINISHED) {
         //记录考试标识
-        let key = getExamCacheKey(query);
+        let key = getExamCacheKey();
         if (key) {
             GM_setValue(key, 1);
         }
@@ -316,21 +326,19 @@ function exitExam(query) {
 }
 /**
  * 是否播放完成进入过考试页面
- * @param {URLSearchParams} query
  * @returns
  */
-function hasJumpToExamAfterFinish(query) {
-    let value = GM_getValue(getExamCacheKey(query));
+function hasJumpToExamAfterFinish() {
+    let value = GM_getValue(getExamCacheKey());
     log('EXAM:' + value);
     return value !== undefined && value !== null;
 }
 /**
  * 当前视频是否播放完成过
- * @param {URLSearchParams} query
  * @returns
  */
-function hasCurrentVideoStudied(query) {
-    return hasCurrentVideoFinished(query) || hasJumpToExamAfterFinish(query);
+function hasCurrentVideoStudied() {
+    return hasCurrentVideoFinished() || hasJumpToExamAfterFinish();
 }
 /**
  * 播放按钮
@@ -342,10 +350,10 @@ function playButton() {
 /**
  * 顺序播放
  */
-function playInOrder(query) {
+function playInOrder() {
     //已经播放过或者正好播放完成,跳到下一个
-    if (hasCurrentVideoStudied(query) || isCurrentVideoFinish(query)) {
-        jumpToNext(query);
+    if (hasCurrentVideoStudied() || isCurrentVideoFinish()) {
+        jumpToNext();
     }
     //点击播放
     playButton().click();
@@ -366,12 +374,12 @@ function shouldPlay() {
  * 开始
  */
 function play() {
-    let query = getQuery();
+    query = getQuery();
     //退出考试页面
-    if (inExam(query)) {
-        exitExam(query);
+    if (inExam()) {
+        exitExam();
     }
-    playInOrder(query);
+    playInOrder();
 }
 function start() {
     if (!shouldPlay()) {
