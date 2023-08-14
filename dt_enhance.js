@@ -27,6 +27,16 @@ const STUDY_STATUS_TEXT_ONGOING = "学习中";
 const STUDY_STATUS_TEXT_EXAM_NOT_PASS = "未通过考试";
 
 /**
+ * 是否有考试
+ */
+const HAS_EXAM_YES = "是";
+
+/**
+ * 脚本运行间隔时间
+ */
+const SCRIPT_RUN_INTERVEL_SECONDS = 12;
+
+/**
  * 脚本运行时间(24小时制 0 ~ 23)
  */
 const HOUR_START = 8;
@@ -35,10 +45,10 @@ const HOUR_END = 23;
 const DEBUG = true;
 /**
  * 下一个视频
- * checked 是否获取下一个视频下标
+ * checked 是否获取过下一个视频下标
  * pageTurned 是否已翻页
  * shouldDelayClickNextVideo 是否延迟点击列表中的下一个视频
- * 翻页时，click 事件会调用接口，根据返回生成播放列表的下一页，但是 ui 的速度慢于 js 执行速度，经常会点到本页的第一个视频，因此此轮不切换视频，标记后下一轮再进行切换
+ * 翻页时，click 事件会调用接口，根据返回生成播放列表的下一页，但是 ui 的速度慢于 js 执行速度，经常会点到本页的第一个视频，因此此轮只翻页不切换视频，标记后下一轮再进行切换
  */
 let nextVideoConfig = {
     videoIndex: null,
@@ -170,6 +180,7 @@ function nextVideo(query) {
     } else {
         /**
          * 获取不到播放按钮，说明此时已经翻页了
+         * （老代码，理论上不会走到这里了，因为前面的 cache 基本都拦截了）
          *
          */
         //没有播放，并且没有翻页，异常情况
@@ -205,6 +216,7 @@ function jumpToNext(query) {
         GM_setValue(getNextVideoCacheKey(query), next);
         return;
     }
+    //点击下一个频频
     video.firstElementChild.click();
 }
 /**
@@ -275,7 +287,7 @@ function hasExam() {
     if (!examText) {
         return false;
     }
-    return examText.innerText === '是';
+    return examText.innerText === HAS_EXAM_YES;
 }
 /**
  * 是否在考试页面
@@ -330,7 +342,7 @@ function playButton() {
 /**
  * 顺序播放
  */
-function orderPlay(query) {
+function playInOrder(query) {
     //已经播放过或者正好播放完成,跳到下一个
     if (hasCurrentVideoStudied(query) || isCurrentVideoFinish(query)) {
         jumpToNext(query);
@@ -359,7 +371,7 @@ function play() {
     if (inExam(query)) {
         exitExam(query);
     }
-    orderPlay(query);
+    playInOrder(query);
 }
 function start() {
     if (!shouldPlay()) {
@@ -370,4 +382,4 @@ function start() {
 function intervalStart(timeout) {
     window.setInterval(start, timeout);
 }
-intervalStart(12 * 1000);
+intervalStart(SCRIPT_RUN_INTERVEL_SECONDS * 1000);
