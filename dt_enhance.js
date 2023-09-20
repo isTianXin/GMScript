@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         灯塔党建增强
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.1
+// @version      1.1.1
 // @description  灯塔党建增强插件:自动连续播放，跳过答题
 // @author       sancunguangyin
 // @match        https://gbwlxy.dtdjzx.gov.cn/content
@@ -38,11 +38,18 @@ const SCRIPT_RUN_INTERVEL_SECONDS = 12;
 
 /**
  * 脚本运行时间(24小时制 0 ~ 23)
+ * 要运行到 0 点就填比 23 大的数
+ * 
  */
 const HOUR_START = 8;
 const HOUR_END = 23;
 
 const DEBUG = true;
+
+/**
+ * 是否执行过 prepare()
+ */
+let prepared = false;
 /**
  * 下一个视频
  * checked 是否获取过下一个视频下标
@@ -74,6 +81,13 @@ function log(...args) {
  */
 function getChildIndex(node) {
     return Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+}
+/**
+ * 视频对象
+ * @returns video
+ */
+function videoElement() {
+    return document.querySelector("video");
 }
 /**
  * 正在播放的视频
@@ -126,6 +140,18 @@ function setFirstVideoInPageAsNextVideo(key) {
     log(key, nextVideoConfig);
 }
 /**
+ * 阻止视频结束后进入考试
+ */
+function preventJumpToExamWhenVideoEnd() {
+    // 添加 ended 事件，阻止自带的 ended 事件（结束后进入考试页面）
+    videoElement().addEventListener("ended", e => {
+        markCurrentVideoHasFinished();
+        e.stopPropagation();
+    },
+        { capture: true }
+    );
+}
+/**
  * 下一个视频
  * @returns
  */
@@ -163,7 +189,7 @@ function nextVideo() {
         log('The end', playing);
         let nextPage = nextPageButton();
         if (!nextPage) {
-            log('Cant find right button');
+            log('Cant find next button');
             return null;
         }
         //最后一页
@@ -185,7 +211,6 @@ function nextVideo() {
     } else {
         /**
          * 获取不到播放按钮，说明此时已经翻页了
-         * （老代码，理论上不会走到这里了，因为前面的 cache 基本都拦截了）
          *
          */
         //没有播放，并且没有翻页，异常情况
@@ -252,27 +277,39 @@ function getNextVideoCacheKey() {
     return 'NEXT:CID:' + query.get('courseId');
 }
 /**
+ * 将当前视频标记为播放完成
+ */
+function markCurrentVideoHasFinished() {
+    GM_setValue(getFinishedCacheKey(), 1);
+}
+/**
  * 当前视频播放是否完毕
- * @returns
+ * @returns boolean
  */
 function isCurrentVideoFinish() {
     //是否出现重播按钮
     let replayButton = document.querySelector("div.vjs-control-bar > button.vjs-play-control.vjs-control.vjs-button.vjs-paused.vjs-ended");
     //播放完成标识
     if (replayButton !== null) {
-        GM_setValue(getFinishedCacheKey(), 1);
+        markCurrentVideoHasFinished();
+        return true;
     }
-    return replayButton !== null;
+    let videoEnded = videoElement().ended;
+    if (videoEnded) {
+        markCurrentVideoHasFinished();
+        return true;
+    }
+    return false;
 }
 /**
  * 根据播放列表视频状态文字判断是否已经播放完成
- * @returns 
+ * @returns
  */
 function isVideoFinishedAccordingToStudyStatusText() {
     log('State:' + playingVideoStudyStateText());
     if ([STUDY_STATUS_TEXT_FINISHED, STUDY_STATUS_TEXT_EXAM_NOT_PASS].includes(playingVideoStudyStateText())) {
         //翻页后 playing 获取不到，因此写入缓存使其在上一步就返回
-        GM_setValue(getFinishedCacheKey(), 1);
+        markCurrentVideoHasFinished();
         return true;
     }
     return false;
@@ -338,7 +375,7 @@ function hasJumpToExamAfterFinish() {
  * @returns
  */
 function hasCurrentVideoStudied() {
-    return hasCurrentVideoFinished() || hasJumpToExamAfterFinish();
+    return hasCurrentVideoFinished();
 }
 /**
  * 播放按钮
@@ -375,17 +412,24 @@ function shouldPlay() {
  */
 function play() {
     query = getQuery();
-    //退出考试页面
-    if (inExam()) {
-        exitExam();
-    }
     playInOrder();
 }
 function start() {
     if (!shouldPlay()) {
         return;
     }
+    prepare();
     play();
+}
+/**
+ * 预处理
+ */
+function prepare() {
+    if (prepared) {
+        return;
+    }
+    preventJumpToExamWhenVideoEnd();
+    prepared = true;
 }
 function intervalStart(timeout) {
     window.setInterval(start, timeout);
