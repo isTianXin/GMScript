@@ -41,10 +41,10 @@ const SCRIPT_RUN_INTERVEL_SECONDS = 12;
  * 要运行到 0 点就填比 23 大的数
  * 
  */
-const HOUR_START = 8;
-const HOUR_END = 23;
+const HOUR_START = 0;
+const HOUR_END = 24;
 
-const DEBUG = true;
+const DEBUG = false;
 
 /**
  * 是否执行过 prepare()
@@ -117,13 +117,13 @@ function playingVideoStudyStateText(playingVideo) {
  * 播放列表翻页button
  */
 function nextPageButton() {
-    return document.querySelector("div.bottom-list-warp > div.bjCourceList-wrap > div.left-right > div.right > button");
+    return document.querySelector("div.left-right > div.right > button");
 }
 /**
  * 播放列表第一个视频
  */
 function firstVideo() {
-    return document.querySelector("div.bottom-list-warp > div.bjCourceList-wrap > div.left-right > div.course-list-warp > div:nth-child(1)");
+    return document.querySelector("div.course-list-warp > div:nth-child(1)");
 }
 function getNextFromSibling(playing) {
     return playing.parentElement.parentElement.nextElementSibling;
@@ -140,7 +140,7 @@ function setFirstVideoInPageAsNextVideo(key) {
     log(key, nextVideoConfig);
 }
 /**
- * 阻止视频结束后进入考试
+ * 阻止视频结束后进入考试页面
  */
 function preventJumpToExamWhenVideoEnd() {
     // 添加 ended 事件，阻止自带的 ended 事件（结束后进入考试页面）
@@ -164,7 +164,7 @@ function nextVideo() {
     if (cachedData) {
         nextVideoConfig = cachedData;
     }
-    // 判断缓存的数据是否获取过下标
+    // 判断缓存的数据是否完整
     if (nextVideoConfig.checked) {
         return nextVideoConfig;
     }
@@ -236,7 +236,7 @@ function jumpToNext() {
         sessionStorage.setItem('listPageNum', next.pageNum);
     }
     let videoIndex = next.videoIndex;
-    let video = document.querySelector("div.bottom-list-warp > div.bjCourceList-wrap > div.left-right > div.course-list-warp").children[videoIndex];
+    let video = document.querySelector("div.course-list-warp").children[videoIndex];
     log('video', video);
 
     //是否延迟一轮
@@ -331,7 +331,7 @@ function hasCurrentVideoFinished(playing) {
  * @returns
  */
 function hasExam() {
-    let examText = document.querySelector("#domhtml > div.app-wrapper.hideSidebar.withoutAnimation.mobile > div > section > div > div:nth-child(2) > div.MainVideo.el-row > div.top-right-warp > div > div:nth-child(1) > div:nth-child(7) > div.titleContent");
+    let examText = document.querySelector("div.MainVideo.el-row > div.top-right-warp > div > div:nth-child(1) > div:nth-child(7) > div.titleContent");
     if (!examText) {
         return false;
     }
@@ -400,12 +400,18 @@ function playInOrder() {
  * @returns {Boolean}
  */
 function shouldPlay() {
-    //相等视为全天
-    if (HOUR_START === HOUR_END) {
-        return true;
-    }
     let hour = new Date().getHours();
     return HOUR_START <= hour && hour < HOUR_END;
+}
+/**
+ * 预处理
+ */
+function prepare() {
+    if (prepared) {
+        return;
+    }
+    preventJumpToExamWhenVideoEnd();
+    prepared = true;
 }
 /**
  * 开始
@@ -420,16 +426,6 @@ function start() {
     }
     prepare();
     play();
-}
-/**
- * 预处理
- */
-function prepare() {
-    if (prepared) {
-        return;
-    }
-    preventJumpToExamWhenVideoEnd();
-    prepared = true;
 }
 function intervalStart(timeout) {
     window.setInterval(start, timeout);
