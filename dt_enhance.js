@@ -47,6 +47,11 @@ const HOUR_END = 24;
 const DEBUG = false;
 
 /**
+ * 是否静音视频
+ */
+const SHOULD_MUTE_VIDEO = true;
+
+/**
  * 是否执行过 prepare()
  */
 let prepared = false;
@@ -294,6 +299,7 @@ function isCurrentVideoFinish() {
         markCurrentVideoHasFinished();
         return true;
     }
+    // video 状态
     let videoEnded = videoElement().ended;
     if (videoEnded) {
         markCurrentVideoHasFinished();
@@ -385,6 +391,17 @@ function playButton() {
     return document.querySelector("button.vjs-big-play-button");
 }
 /**
+ * 播放视频
+ */
+function playVideo() {
+    let video = videoElement();
+    if (video.paused) {
+        //点击播放
+        playButton().click();
+        video.muted = SHOULD_MUTE_VIDEO;
+    }
+}
+/**
  * 顺序播放
  */
 function playInOrder() {
@@ -392,8 +409,7 @@ function playInOrder() {
     if (hasCurrentVideoStudied() || isCurrentVideoFinish()) {
         jumpToNext();
     }
-    //点击播放
-    playButton().click();
+    playVideo();
 }
 /**
  * 是否应该播放
