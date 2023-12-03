@@ -1,12 +1,14 @@
 // ==UserScript==
 // @name         灯塔党建增强
 // @namespace    https://github.com/isTianXin/GMScript/
-// @version      1.1.1
+// @version      1.1.2
 // @description  灯塔党建增强插件:自动连续播放，跳过答题
 // @author       sancunguangyin
 // @match        https://gbwlxy.dtdjzx.gov.cn/content
+// @connect      dtdjzx.gov.cn
 // @grant        GM_setValue
 // @grant        GM_getValue
+// @grant        GM_xmlhttpRequest
 // @run-at       document-end
 // ==/UserScript==
 
@@ -39,17 +41,25 @@ const SCRIPT_RUN_INTERVEL_SECONDS = 12;
 /**
  * 脚本运行时间(24小时制 0 ~ 23)
  * 要运行到 0 点就填比 23 大的数
- * 
+ *
  */
 const HOUR_START = 0;
 const HOUR_END = 24;
 
-const DEBUG = false;
+const DEBUG = true;
 
 /**
  * 是否静音视频
  */
 const SHOULD_MUTE_VIDEO = true;
+
+/**
+ * 视频接口路径
+ */
+const BASE_PATH = "https://gbwlxy.dtdjzx.gov.cn/__api/api";
+
+//视频结束
+const API_STUDY_END = "study/v2/end";
 
 /**
  * 是否执行过 prepare()
@@ -78,7 +88,61 @@ let query = null;
 function log(...args) {
     DEBUG && console.log(args);
 }
+/**
+ * xhr
+ * @param options 须满足 GM_xmlhttpRequest 参数
+ */
+let fetch = async (options) => {
+    return new Promise((resolve, reject = (response, url = options.url) => {
+        console.log(
+            'Error getting ' + url + ' (' + response.status + ' ' + response.statusText + ')'
+        );
+    }) => {
+        GM_xmlhttpRequest({
+            onload(response) {
+                if (response.status >= 200 && response.status < 400) {
+                    resolve(response);
+                } else {
+                    reject(response);
+                }
+            },
+            onerror(response) {
+                reject(response);
+            },
+            ...options
+        });
+    });
+};
 
+/**
+ * 获取用户信息
+ * @returns object
+ */
+function getUserInfo(){
+    return JSON.parse(sessionStorage.getItem("userInfo")) || {};
+}
+/**
+ * 获取 idCardHash
+ * @returns string
+ */
+function getIdCardHash(){
+    return getUserInfo()?.data?.idCardHash;
+}
+
+/**
+ * 调用 study end 接口
+ */
+async function noticeServerVideoStudyEnd(){
+    let postData = {"courseId":query.get("courseId"),"idCardHash":getIdCardHash()};
+    log(postData);
+    let response = await fetch({
+        url:`${BASE_PATH}/${API_STUDY_END}`,
+        method:"POST",
+        data: JSON.stringify(postData),
+        headers: { "Content-Type": "application/json" },
+    });
+    log(response);
+}
 /**
  * 获取子节点为父节点的第几个元素
  * @param node
@@ -148,8 +212,14 @@ function setFirstVideoInPageAsNextVideo(key) {
  * 阻止视频结束后进入考试页面
  */
 function preventJumpToExamWhenVideoEnd() {
+    if(!hasExam()){
+        log("do not have exam");
+        return;
+    }
     // 添加 ended 事件，阻止自带的 ended 事件（结束后进入考试页面）
     videoElement().addEventListener("ended", e => {
+        //自带 ended 事件包含了调用 study end 接口，不调用该接口则视频始终显示未完成。
+        noticeServerVideoStudyEnd();
         markCurrentVideoHasFinished();
         e.stopPropagation();
     },
@@ -299,7 +369,7 @@ function isCurrentVideoFinish() {
         markCurrentVideoHasFinished();
         return true;
     }
-    // video 状态
+// video 状态
     let videoEnded = videoElement().ended;
     if (videoEnded) {
         markCurrentVideoHasFinished();
@@ -395,7 +465,7 @@ function playButton() {
  */
 function playVideo() {
     let video = videoElement();
-    if (video.paused) {
+        if (video.paused) {
         //点击播放
         playButton().click();
         video.muted = SHOULD_MUTE_VIDEO;
