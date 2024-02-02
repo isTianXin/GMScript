@@ -44,6 +44,11 @@
 // @match        *://www.zxcs.info/author/*
 // @match        *://www.zxcs.info/tag/*
 // @match        *://www.zxcs.info/index.php?keyword=*
+// @match        *://zxcs.info/sort/*
+// @match        *://zxcs.info/post/*
+// @match        *://zxcs.info/author/*
+// @match        *://zxcs.info/tag/*
+// @match        *://zxcs.info/index.php?keyword=*
 // @match        *://zxcstxt.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
@@ -81,7 +86,7 @@
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
 // @connect      zxcstxt.com
-// @version      0.14
+// @version      0.14.1
 // @run-at       document-end
 // ==/UserScript==
 
@@ -369,6 +374,20 @@ const rateSiteTargetRoute = {
             return prefix + 'sort';
         }
     },
+    'zxcs.info': () => {
+        let tag = location.pathname.split('/')[1];
+        if (tag === 'post') {
+            return 'zxcsinfo.post';
+        }
+        let prefix = 'zxcs8.';
+        if (['sort', 'tag', 'author'].includes(tag)) {
+            return prefix + 'sort';
+        }
+        // 搜索页面
+        if (location.pathname.includes('index.php')) {
+            return prefix + 'sort';
+        }
+    },
     'www.yousuu.com': () => {
         let tag = location.pathname.split('/')[1];
         let prefix = 'yousuu.';
@@ -392,7 +411,7 @@ const rateSiteTargetConfig = {
             return item.querySelector('h1').innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector('h1').innerText.match('[:：](.+)')[1].trim();
+            return getAuthorName(item.querySelector('h1').innerText);
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -415,7 +434,7 @@ const rateSiteTargetConfig = {
             return item.firstElementChild.innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.firstElementChild.innerText.match('[:：](.+)')[1].trim();
+            return getAuthorName(item.firstElementChild.innerText);
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -479,7 +498,7 @@ const rateSiteTargetConfig = {
             return item.querySelector('.book>h5>a').innerText;
         },
         bookAuthor(item) {
-            return item.querySelector('.book>.price').innerText.split('：').pop();
+            return getAuthorName(item.querySelector('.book>.price').innerText);
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -837,7 +856,7 @@ const rateSiteTargetConfig = {
             return item.querySelector('h1').innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector('h1').innerText.match('[:：](.+)')[1].trim();
+            return item.querySelector("name > a").innerText.trim();
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -857,7 +876,7 @@ const rateSiteTargetConfig = {
             return item.firstElementChild.innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.firstElementChild.innerText.match('[:：](.+)')[1].trim();
+            return getAuthorName(item.firstElementChild.innerText);
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -895,15 +914,15 @@ const downloadSiteSourceConfig = {
             return item.children["0"].innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
+            return getAuthorName(item.children["0"].innerText);
         },
         bookLink(item) {
             let url = item.children["0"].getElementsByTagName('a')[0].href;
-            return this.host + url.replace(location.origin, '').replace(this.host, '');
+            return handleUrl(url,location.origin,this.host);     
         },
         downloadLink(item) {
             let url = item.querySelector('.down_2>a').href;
-            return this.host + url.replace(location.origin, '').replace(this.host, '');
+            return handleUrl(url,location.origin,this.host);  
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_FETCH })));
@@ -932,7 +951,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector('.xs3>a').innerText.split('（').shift().replace(/[《,》]/g, '');
         },
         bookAuthor(item) {
-            return item.querySelector('.xs3>a').innerText.split('：').pop();
+            return getAuthorName(item.querySelector('.xs3>a').innerText);
         },
         bookLink(item) {
             return item.querySelector('.xs3>a').href;
@@ -1118,7 +1137,7 @@ const downloadSiteSourceConfig = {
             } else {
                 href = item.querySelector('div.contentDiv > div > div.route').lastElementChild.href;
             }
-            return this.host + href.replace(location.origin, '').replace(this.host, '');
+            return handleUrl(url,location.origin,this.host);
         },
         downloadLink(item) {
             return this.host + '/down' + this.bookLink(item).replace(location.origin, '').replace(this.host, '');
@@ -1293,7 +1312,7 @@ const downloadSiteSourceConfig = {
             return item.innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.innerText.match(/[:：](.*)/)[1];
+            return getAuthorName(item.innerText);
         },
         bookLink(item) {
             return item.href.replace(location.origin, '');
@@ -1326,7 +1345,7 @@ const downloadSiteSourceConfig = {
             return item.querySelector("header > h1").innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector("header > h1").innerText.match(/[:：](.*)/)[1];
+            return getAuthorName(item.querySelector("header > h1").innerText);
         },
         bookLink(item) {
             //实际是下载链接
@@ -1428,7 +1447,7 @@ const downloadSiteSourceConfig = {
         },
         downloadLink(item) {
             let url = item.querySelector("div.col.xs-24.md-9.loadbutton > a").href;
-            return this.host + url.replace(location.origin, '').replace(this.host, '');
+            return handleUrl(url,location.origin,this.host);
         },
         handler(options) {
             return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
@@ -1455,11 +1474,11 @@ const downloadSiteSourceConfig = {
             return item.children["0"].innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
+            return getAuthorName(item.children["0"].innerText);
         },
         bookLink(item) {
             let url = item.children["0"].getElementsByTagName('a')[0].href;
-            return this.host + url.replace(location.origin, '').replace(this.host, '');
+            return handleUrl(url,location.origin,this.host);  
         },
         downloadLink(item) {
             return this.bookLink(item);
@@ -1489,7 +1508,7 @@ const downloadSiteSourceConfig = {
             return item.children["0"].innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.children["0"].innerText.match('[:：](.+)')[1].trim();;
+            return getAuthorName(item.children["0"].innerText);
         },
         bookLink(item) {
             let url = item.children["0"].getElementsByTagName('a')[0].href;
@@ -1551,11 +1570,7 @@ const downloadSiteTargetConfig = {
             if (!author) {
                 return '';
             }
-            let text = author.match('[:：](.+)');
-            if (!text) {
-                return author;
-            }
-            return text[1].trim();
+            return getAuthorName(author) || author;
         },
         //获取下载链接后的处理
         task(info) {
@@ -1753,6 +1768,39 @@ let fetch = async (options) => {
     });
 };
 
+/**
+ * 处理提取到的 url, 去除 location.ogrigin，拼接 site host
+ * @param {string} url 
+ * @param {string} locationOrigin string 
+ * @param {string} siteHost string
+ * @returns {string}
+ */
+let handleUrl = (url, locationOrigin, siteHost) => {
+    if(!url){
+        return '';
+    }
+    url = url.replace(locationOrigin,'');
+    if(url.startsWith('http') || url.startsWith('www') || url.startsWith(siteHost)){
+        return url;
+    }
+    return siteHost + url.replace(siteHost,'');
+}
+
+/**
+ * 提取冒号后的 author name
+ * @param {string} str 
+ * @returns {string}
+ */
+let getAuthorName = (str) => {
+    if(!str){
+        return '';
+    }
+    let sep = '：';
+    if(!str.includes(sep)){
+        sep = ':';
+    }
+    return (str.split(sep)?.pop() || '').trim();
+}
 /*=====================================================================================================*/
 
 /*===============================================  评分  ===============================================*/
