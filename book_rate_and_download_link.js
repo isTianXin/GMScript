@@ -50,6 +50,7 @@
 // @match        *://zxcs.info/tag/*
 // @match        *://zxcs.info/index.php?keyword=*
 // @match        *://zxcstxt.com/*
+// @match        *://zxcsol.com/*
 // @grant        GM_xmlhttpRequest
 // @grant        GM_info
 // @grant        GM_getValue
@@ -86,7 +87,8 @@
 // @connect      www.ibiquta.com
 // @connect      www.mhtxs.la
 // @connect      zxcstxt.com
-// @version      0.14.1
+// @connect      zxcsol.com
+// @version      0.15
 // @run-at       document-end
 // ==/UserScript==
 
@@ -387,6 +389,14 @@ const rateSiteTargetRoute = {
         if (location.pathname.includes('index.php')) {
             return prefix + 'sort';
         }
+    },
+    'zxcsol.com': () => {
+        let tag = location.pathname.split('/')[2];
+        let prefix = 'zxcstxt.';
+        if (/^(\d)+(\.)html/.test(tag)) {
+            return prefix + 'post';
+        }
+        return prefix + 'sort';
     },
     'www.yousuu.com': () => {
         let tag = location.pathname.split('/')[1];
@@ -856,7 +866,7 @@ const rateSiteTargetConfig = {
             return item.querySelector('h1').innerText.match('《(.*?)》')[1];
         },
         bookAuthor(item) {
-            return item.querySelector("name > a").innerText.trim();
+            return getAuthorName(item.querySelector('h1').innerText);
         },
         maxNum: MAX_SEARCH_NUM,
         rateItem(rate, rateNum, bookLink) {
@@ -1498,6 +1508,37 @@ const downloadSiteSourceConfig = {
         name: 'zxcstxt',
         siteName: '知轩藏书(txt)',
         host: 'https://zxcstxt.com',
+        searchConfig(args) {
+            return { url: this.host + '/?s=' + args.bookName + '&type=post', method: "GET" };
+        },
+        bookList(item) {
+            return Array.from(item.querySelectorAll('.posts-item'));
+        },
+        bookName(item) {
+            return item.children["0"].innerText.match('《(.*?)》')[1];
+        },
+        bookAuthor(item) {
+            return getAuthorName(item.children["0"].innerText);
+        },
+        bookLink(item) {
+            let url = item.children["0"].getElementsByTagName('a')[0].href;
+            let bookId = parseInt(url.split("/").pop());
+            return `${this.host}/download?post=${bookId}`
+        },
+        downloadLink(item) {
+            return this.bookLink(item);
+        },
+        handler(options) {
+            return getDownLoadLink((Object.assign(options, { type: DOWNLOAD_TYPE_DIRECT })));
+        },
+        parse(bookInfo, handler, response) {
+            return parseRawDownloadResponse(bookInfo, handler, response);
+        },
+    },
+    'zxcsol': {
+        name: 'zxcsol',
+        siteName: '知轩藏书(ol)',
+        host: 'https://zxcsol.com',
         searchConfig(args) {
             return { url: this.host + '/?s=' + args.bookName + '&type=post', method: "GET" };
         },
