@@ -49,7 +49,7 @@ let log = (...args) => {
 /**
  *
  */
-let init = () => {
+let prepare = () => {
     query = new URLSearchParams(window.location.search);
     courseName = initCurrentCourseName();
 }
@@ -89,7 +89,7 @@ let getVideoElement = () => {
  * 获取视频播放按钮
  */
 let getPlayButton = () => {
-    return document.querySelector(".prism-play-btn");
+    return document.querySelector(".prism-big-play-btn");
 }
 
 /**
@@ -113,18 +113,41 @@ let getNextVideoItemInList = () => {
  */
 let isCurrentVideoFinish = () => {
     if (isVideoFinishedAccordingToVideoMark()) {
+        console.log('video mark');
         return true;
     }
-    //播放时间 == 总时间
-    let currentTime = document.querySelector(".current-time").innerText;
-    let duration = document.querySelector(".duration").innerText;
-    if (currentTime == duration) {
-        markCurrentVideoHasFinished();
+    if (isVideoFinishedAccordingToVideoElementState()) {
+        console.log('state');
         return true;
     }
+    return false;
+}
+/**
+ * 根据视频播放时间
+ * @returns {boolean}
+ */
+let isVideoFinishedAccordingToVideoElementState = () => {
     //判断控件状态
     let videoEnded = getVideoElement().ended;
     if (videoEnded) {
+        markCurrentVideoHasFinished();
+        return true;
+    }
+    return false;
+}
+/**
+ * 根据视频播放时间
+ * @returns {boolean}
+ */
+let isVideoFinishedAccordingToDurationTime = () => {
+    //播放时间 == 总时间
+    let currentTime = document.querySelector(".current-time").innerText;
+    let duration = document.querySelector(".duration").innerText;
+    console.log(currentTime,duration);
+    if (currentTime === '00:00') {
+        return false;
+    }
+    if (currentTime >= duration) {
         markCurrentVideoHasFinished();
         return true;
     }
@@ -191,7 +214,7 @@ let start = () => {
     if (!shouldPlay()) {
         return;
     }
-    init();
+    prepare();
     playInOrder();
 }
 
