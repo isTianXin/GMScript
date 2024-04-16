@@ -113,11 +113,11 @@ let getNextVideoItemInList = () => {
  */
 let isCurrentVideoFinish = () => {
     if (isVideoFinishedAccordingToVideoMark()) {
-        console.log('video mark');
+        log('video mark');
         return true;
     }
     if (isVideoFinishedAccordingToVideoElementState()) {
-        console.log('state');
+        log('state');
         return true;
     }
     return false;
@@ -143,7 +143,7 @@ let isVideoFinishedAccordingToDurationTime = () => {
     //播放时间 == 总时间
     let currentTime = document.querySelector(".current-time").innerText;
     let duration = document.querySelector(".duration").innerText;
-    console.log(currentTime,duration);
+    log(currentTime,duration);
     if (currentTime === '00:00') {
         return false;
     }
